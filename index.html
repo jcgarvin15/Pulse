@@ -1,762 +1,1371 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Pulse">
-  <meta name="theme-color" content="#000000">
-  <title>Pulse — Workout Portfolio & Live Ticker</title>
-  <style>
-    :root {
-      --bg: #000000;
-      --card-bg: #121212;
-      --card-border: #1E1E1E;
-      --rh-green: #00C805;
-      --rh-red: #FF5533;
-      --rh-yellow: #CCFF00;
-      --text-main: #FFFFFF;
-      --text-muted: #8C8C8C;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pulse">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Pulse — interval training timer. Keeps your music playing, keeps your screen awake.">
+<title>Pulse</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/favicon-64.png" sizes="64x64">
+<style>
+:root{
+  --bg:#000000;
+  --surface:#101215;
+  --surface-2:#181C21;
+  --surface-3:#22272E;
+  --border:rgba(255,255,255,.09);
+  --border-strong:rgba(255,255,255,.16);
+  --brand:#48FD00;
+  --brand-dim:rgba(72,253,0,.16);
+  --up:#48FD00;
+  --down:#FF4A3D;
+  --warn:#FFB800;
+  --text:#FFFFFF;
+  --muted:#8A9199;
+  --muted-2:#5C646D;
+  --tab-h:56px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.45;
+  min-height:100vh;min-height:100dvh;
+  overflow-x:hidden;overscroll-behavior-y:none;
+  -webkit-user-select:none;user-select:none;
+  -webkit-font-smoothing:antialiased;
+}
+input,textarea{-webkit-user-select:text;user-select:text}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-user-select: none;
-      user-select: none;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Roboto, Helvetica, Arial, sans-serif;
-    }
+/* ---------- shell ---------- */
+.app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.topbar{
+  position:sticky;top:0;z-index:50;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:rgba(0,0,0,.82);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:9px}
+.brand svg{width:26px;height:26px;color:var(--brand);display:block}
+.brand-name{font-size:1.22rem;font-weight:800;letter-spacing:-.035em}
+.main{flex:1;display:flex;flex-direction:column;padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 20px)}
+.view{display:none;flex:1;flex-direction:column;animation:fade .22s var(--ease)}
+.view.active{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.wrap{width:100%;max-width:600px;margin:0 auto;padding:0 16px}
 
-    body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
+/* ---------- tab bar ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  height:calc(var(--tab-h) + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:rgba(0,0,0,.9);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:1px solid var(--border);
+}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted-2);transition:color .15s}
+.tab svg{width:22px;height:22px}
+.tab span{font-size:.63rem;font-weight:700;letter-spacing:.02em}
+.tab.active{color:var(--brand)}
+.tab:disabled{opacity:.35}
 
-    /* Views container */
-    .view-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+/* ---------- generic ---------- */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--brand);color:#000;font-weight:750;font-size:.85rem;
+  padding:9px 17px;border-radius:100px;transition:transform .12s var(--ease),opacity .15s;
+}
+.pill:active{transform:scale(.95)}
+.pill.ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px}
+.eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 
-    .view {
-      display: none;
-      flex: 1;
-      flex-direction: column;
-    }
+/* ---------- hero ---------- */
+.hero{padding:22px 0 8px}
+.hero-label{font-size:.8rem;color:var(--muted);font-weight:600}
+.hero-value{font-size:2.7rem;font-weight:800;letter-spacing:-.045em;line-height:1.05;margin:2px 0 4px}
+.hero-delta{font-size:.9rem;font-weight:700;color:var(--up);display:flex;align-items:center;gap:6px}
+.hero-delta.zero{color:var(--muted)}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px 13px}
+.stat b{display:block;font-size:1.16rem;font-weight:800;letter-spacing:-.03em}
+.stat span{font-size:.68rem;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 
-    .view.active {
-      display: flex;
-    }
+/* ---------- search + chips ---------- */
+.searchbar{position:relative;margin:20px 0 12px}
+.searchbar svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted-2)}
+.searchbar input{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:13px;padding:11px 13px 11px 37px;color:var(--text);font-size:.95rem;
+}
+.searchbar input::placeholder{color:var(--muted-2)}
+.searchbar input:focus{outline:none;border-color:var(--border-strong)}
+.chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:100px;padding:7px 14px;font-size:.79rem;font-weight:650;color:var(--muted);white-space:nowrap;
+  transition:all .15s;
+}
+.chip.active{background:var(--brand);border-color:var(--brand);color:#000}
 
-    /* Navbar */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      position: sticky;
-      top: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(20px);
-      z-index: 1000;
-    }
+/* ---------- list ---------- */
+.list{display:flex;flex-direction:column;padding-bottom:24px}
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 12px;border-bottom:1px solid var(--border);border-radius:12px;
+  transition:background .12s;text-align:left;width:100%;
+}
+.row:active{background:var(--surface-2)}
+.row-l{min-width:0;flex:1 1 auto}
+.row-sym{font-size:.66rem;font-weight:800;letter-spacing:.09em;color:var(--brand);margin-bottom:3px}
+.row-name{font-size:.96rem;font-weight:700;letter-spacing:-.012em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{font-size:.76rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-r{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.spark{width:40px;height:22px;display:block;flex:0 0 auto}
+/* On narrow phones the name column matters more than the sparkline. */
+@media (max-width:380px){ .spark{display:none} }
+.row-go{font-size:.78rem;font-weight:750;color:#000;background:var(--brand);padding:6px 13px;border-radius:100px}
+.empty{text-align:center;color:var(--muted);padding:48px 20px;font-size:.9rem}
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
+/* ---------- session ---------- */
+/* padding-* only: a `padding` shorthand here would clobber .wrap's gutters */
+.sess{display:flex;flex-direction:column;gap:14px;padding-top:16px;padding-bottom:28px}
+.sess-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.icon-btn{
+  display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:100px;padding:8px 14px;font-size:.82rem;font-weight:650;
+}
+.icon-btn:active{transform:scale(.96)}
+.status-chips{display:flex;gap:6px}
+.schip{
+  display:inline-flex;align-items:center;gap:5px;font-size:.66rem;font-weight:750;
+  padding:5px 10px;border-radius:100px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--muted-2);letter-spacing:.02em;
+}
+.schip .dot{width:6px;height:6px;border-radius:50%;background:var(--muted-2)}
+.schip.on{color:var(--brand);border-color:rgba(72,253,0,.35);background:var(--brand-dim)}
+.schip.on .dot{background:var(--brand);box-shadow:0 0 7px var(--brand)}
+.schip.warn{color:var(--warn);border-color:rgba(255,184,0,.3);background:rgba(255,184,0,.1)}
+.schip.warn .dot{background:var(--warn)}
 
-    .logo-container {
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+.timer-card{padding:24px 20px 22px;text-align:center;position:relative;overflow:hidden}
+.badge{
+  display:inline-block;font-size:.68rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase;
+  padding:6px 13px;border-radius:8px;margin-bottom:14px;
+}
+.badge.work{background:var(--brand-dim);color:var(--brand)}
+.badge.rest{background:rgba(255,184,0,.14);color:var(--warn)}
+.badge.setup{background:rgba(138,145,153,.14);color:var(--muted)}
+.badge.done{background:var(--brand);color:#000}
+.timer{
+  font-size:clamp(4.6rem,26vw,6.6rem);font-weight:850;letter-spacing:-.055em;line-height:.94;
+  margin-bottom:10px;transition:color .12s;
+}
+.timer.urgent{color:var(--down)}
+/* Reserve two lines so the card doesn't jump as titles change length. */
+.sess-title{font-size:1.18rem;font-weight:800;letter-spacing:-.025em;margin-bottom:5px;
+  min-height:2.9em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
+.sess-next{font-size:.87rem;color:var(--muted);margin-bottom:20px;min-height:1.3em}
+.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden;margin-bottom:20px}
+.bar-fill{height:100%;background:var(--brand);border-radius:100px;transform-origin:left;will-change:transform}
+.bar-fill.rest{background:var(--warn)}
+.bar-fill.setup{background:var(--muted)}
+.controls{display:grid;grid-template-columns:1fr 1.7fr 1fr;gap:10px}
+.ctrl{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:15px;
+  padding:15px 0;font-weight:750;font-size:.92rem;transition:transform .12s var(--ease),background .15s;
+}
+.ctrl:active{transform:scale(.96)}
+.ctrl.primary{background:var(--brand);color:#000;border-color:var(--brand);font-size:1rem;letter-spacing:.01em}
+.ctrl.primary.running{background:var(--warn);border-color:var(--warn)}
 
-    .logo-container svg {
-      width: 100%;
-      height: 100%;
-    }
+.chart-card{padding:16px 16px 12px}
+.chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.chart-head b{font-size:.9rem;font-weight:750;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-head span{font-size:.75rem;color:var(--muted);font-weight:600;flex:0 0 auto;white-space:nowrap}
+.chart-wrap{position:relative;width:100%;height:88px}
+.chart{width:100%;height:100%;display:block;overflow:visible}
+.chart-legend{display:flex;gap:14px;margin-top:9px}
+.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.chart-legend div{font-size:.68rem;color:var(--muted);font-weight:600}
 
-    .brand-title {
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: var(--text-main);
-    }
+.blueprint{padding:16px 18px}
+.bp-row{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.88rem}
+.bp-row:last-child{border-bottom:none}
+.bp-row span:first-child{color:var(--muted);font-weight:600}
+.bp-row span:last-child{font-weight:700;text-align:right}
 
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+/* ---------- settings ---------- */
+.set-group{margin:20px 0}
+.set-group > .eyebrow{padding:0 4px 9px}
+.set-card{overflow:hidden}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-row .lbl{font-size:.92rem;font-weight:650}
+.set-row .hint{font-size:.74rem;color:var(--muted);margin-top:3px;line-height:1.4}
+.stepper{display:flex;align-items:center;gap:2px;background:var(--surface-2);border-radius:11px;padding:3px;flex:0 0 auto}
+.stepper button{width:32px;height:30px;border-radius:8px;font-size:1.15rem;font-weight:700;color:var(--brand);line-height:1}
+.stepper button:active{background:var(--surface-3)}
+.stepper .val{min-width:52px;text-align:center;font-weight:750;font-size:.92rem}
+.seg{display:flex;background:var(--surface-2);border-radius:11px;padding:3px;flex:0 0 auto}
+.seg button{padding:7px 13px;border-radius:8px;font-size:.79rem;font-weight:700;color:var(--muted)}
+.seg button.active{background:var(--surface-3);color:var(--brand)}
+.sw{width:50px;height:30px;border-radius:100px;background:var(--surface-3);position:relative;transition:background .18s;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .18s var(--ease)}
+.sw.on{background:var(--brand)}
+.sw.on::after{transform:translateX(20px)}
+.diag{font-size:.74rem;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.7;padding:13px 16px;white-space:pre-wrap}
+.diag b{color:var(--brand);font-weight:700}
+.diag em{color:var(--warn);font-style:normal;font-weight:700}
+.note{font-size:.78rem;color:var(--muted);line-height:1.55;padding:0 4px;margin-top:9px}
 
-    .rh-pill-btn {
-      background: var(--rh-yellow);
-      color: #000000;
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 8px 16px;
-      border-radius: 24px;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
-    }
+/* ---------- resume banner ---------- */
+.resume{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--brand-dim);border:1px solid rgba(72,253,0,.3);border-radius:16px;
+  padding:13px 15px;margin-top:18px;
+}
+.resume div{font-size:.85rem;font-weight:650}
+.resume small{display:block;color:var(--muted);font-weight:500;font-size:.75rem;margin-top:2px}
 
-    .rh-pill-btn:hover { opacity: 0.9; }
-    .rh-pill-btn:active { transform: scale(0.96); }
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 16px);
+  transform:translate(-50%,20px);z-index:90;
+  background:var(--surface-3);border:1px solid var(--border-strong);border-radius:13px;
+  padding:11px 17px;font-size:.85rem;font-weight:650;max-width:90vw;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .22s,transform .22s var(--ease);
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
 
-    /* Home View: Robinhood List Style */
-    .ticker-list-container {
-      max-width: 680px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 20px 16px 60px 16px;
-    }
-
-    .section-header-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin-bottom: 16px;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-    }
-
-    .ticker-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 16px;
-      border-bottom: 1px solid var(--card-border);
-      cursor: pointer;
-      transition: background 0.15s;
-      border-radius: 12px;
-    }
-
-    .ticker-row:hover {
-      background: #0A0A0A;
-    }
-
-    .ticker-info h3 {
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin-bottom: 2px;
-    }
-
-    .ticker-info span {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .ticker-action-badge {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #000;
-      background: var(--rh-yellow);
-      padding: 6px 14px;
-      border-radius: 16px;
-    }
-
-    /* Active Workout Standalone Tab View */
-    .active-workout-view {
-      max-width: 540px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px 16px;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      justify-content: space-between;
-    }
-
-    .back-nav-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .back-btn {
-      background: #1A1A1A;
-      border: 1px solid var(--card-border);
-      color: var(--text-main);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .workout-main-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 32px;
-      padding: 32px 24px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-      margin-bottom: 24px;
-    }
-
-    .workout-badge {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 6px 14px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .badge-work { background: rgba(0, 200, 5, 0.15); color: var(--rh-green); }
-    .badge-trans { background: rgba(255, 184, 0, 0.15); color: #FFB800; }
-    .badge-setup { background: rgba(140, 140, 140, 0.15); color: #8C8C8C; }
-
-    .workout-timer-large {
-      font-size: 6rem;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      margin-bottom: 16px;
-      transition: color 0.1s ease;
-    }
-    .workout-timer-large.countdown-red {
-      color: var(--rh-red);
-    }
-
-    .workout-title-lg {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-      letter-spacing: -0.02em;
-    }
-
-    .workout-subtitle-lg {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-    }
-
-    .progress-bar-container {
-      height: 8px;
-      width: 100%;
-      background: #1E1E1E;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 32px;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--rh-green);
-      width: 100%;
-      transition: width 0.2s linear;
-    }
-
-    .workout-controls-grid {
-      display: grid;
-      grid-template-columns: 1fr 2fr 1fr;
-      gap: 12px;
-    }
-
-    .ctrl-btn {
-      background: #1A1A1A;
-      border: 1px solid var(--card-border);
-      color: var(--text-main);
-      padding: 16px 0;
-      border-radius: 16px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      cursor: pointer;
-      text-align: center;
-      transition: background 0.15s;
-    }
-
-    .ctrl-btn:hover { background: #262626; }
-    .ctrl-btn:active { transform: scale(0.97); }
-
-    .ctrl-btn.primary {
-      background: var(--rh-green);
-      color: #000000;
-      border: none;
-    }
-
-    .ctrl-btn.primary.paused {
-      background: #FFB800;
-    }
-
-    .exercise-sequence-box {
-      background: #0A0A0A;
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 20px;
-    }
-
-    .sequence-header {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .sequence-items {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .seq-item {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-
-    .seq-item:last-child { border-bottom: none; }
-    .seq-item span:last-child { color: var(--text-muted); font-weight: 500; }
-  </style>
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
 
-  <header>
-    <a href="#" class="brand" onclick="switchView('home-view'); return false;">
-      <div class="logo-container">
-        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M190 370V140" stroke="#CCFF00" stroke-width="28" stroke-linecap="round"/>
-          <path d="M214 370V140" stroke="#CCFF00" stroke-width="28" stroke-linecap="round"/>
-          <path d="M214 140C214 140 214 90 264 90H300C350 90 350 140 350 140C350 140 350 190 300 190H214" stroke="#CCFF00" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M214 260C214 260 214 210 264 210H285C310 210 325 225 325 250C325 275 305 290 280 290H214" stroke="#CCFF00" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="256" cy="250" r="24" fill="#CCFF00"/>
-          <path d="M280 230L335 140M335 140H290M335 140V185" stroke="#CCFF00" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <span class="brand-title">Pulse</span>
-    </a>
-    <div class="nav-right">
-      <button class="rh-pill-btn" onclick="startWorkout(0)">Start Live Session</button>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 512 512" fill="none" role="img" aria-label="Pulse">
+        <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M259.4 74.3C263.7 74.7 280.5 76.0 285.0 76.6C289.4 77.2 286.4 77.2 286.3 77.8C286.3 78.4 288.1 76.8 284.7 80.3C281.3 83.8 269.3 95.2 265.6 98.9C261.9 102.6 266.1 101.8 262.4 102.6C258.8 103.5 248.8 103.3 243.6 103.9C238.4 104.5 235.6 105.1 231.2 106.2C226.8 107.3 222.9 108.4 217.4 110.8C211.9 113.2 202.4 118.1 198.1 120.4C193.8 122.7 194.5 122.4 191.6 124.6C188.7 126.8 184.6 129.9 180.8 133.5C177.0 137.0 172.1 142.1 168.9 145.7C165.8 149.3 164.2 151.7 162.0 154.9C159.9 158.1 157.5 162.2 155.9 164.9C154.3 167.7 153.7 168.7 152.4 171.5C151.2 174.2 149.7 177.2 148.2 181.5C146.8 185.7 144.6 193.1 143.6 196.9C142.7 200.7 142.8 200.9 142.5 204.3C142.1 207.7 141.5 198.5 141.3 217.3C141.2 236.0 141.3 300.1 141.4 316.8C141.5 333.5 141.6 317.3 142.0 317.4C142.5 317.5 139.8 317.5 144.2 317.5C148.5 317.5 164.0 317.5 168.1 317.4C172.2 317.3 168.6 317.6 168.7 316.8C168.8 316.1 168.7 329.8 168.8 312.9C168.8 295.9 168.7 233.5 169.1 215.1C169.4 196.7 170.2 205.9 170.9 202.3C171.5 198.8 171.9 197.2 173.2 193.8C174.4 190.4 176.6 185.1 178.1 181.8C179.7 178.6 180.1 177.5 182.4 174.1C184.6 170.7 188.4 165.2 191.6 161.4C194.8 157.7 197.7 155.0 201.6 151.9C205.4 148.7 210.0 145.3 214.6 142.6C219.3 140.0 225.5 137.3 229.3 135.7C233.0 134.2 233.5 134.2 237.0 133.4C240.5 132.7 246.6 131.5 250.0 131.1C253.4 130.8 256.0 131.0 257.3 131.2C258.7 131.4 258.0 128.5 258.1 132.3C258.3 136.1 258.3 149.6 258.3 154.0C258.2 158.4 258.0 157.8 257.8 158.7C257.6 159.6 259.3 158.9 256.9 159.4C254.5 159.9 246.6 160.7 243.2 161.4C239.7 162.2 238.8 162.6 236.2 163.8C233.5 164.9 230.3 166.4 227.3 168.4C224.3 170.3 220.5 173.2 218.0 175.3C215.6 177.3 214.6 178.3 212.7 180.6C210.8 183.0 208.5 185.8 206.5 189.1C204.6 192.4 202.5 196.9 201.2 200.3C199.8 203.7 199.1 207.1 198.5 209.6C197.9 212.1 197.9 212.7 197.7 215.4C197.5 218.2 197.5 180.9 197.4 226.0C197.3 271.1 197.2 442.2 197.1 485.8C197.0 529.4 197.1 487.2 196.8 487.6C196.6 487.9 199.4 487.8 195.4 487.9C191.5 488.0 177.4 487.9 173.1 487.9C168.8 487.9 170.3 487.8 169.6 487.7C168.9 487.6 169.2 509.4 169.1 487.2C168.9 465.1 168.8 377.8 168.8 354.8C168.7 331.9 168.8 350.8 168.7 349.5C168.6 348.1 171.8 347.0 168.0 346.5C164.2 346.0 150.1 346.4 145.7 346.4C141.3 346.5 142.5 323.5 141.7 346.9C140.9 370.3 141.2 463.4 141.1 486.8C140.9 510.3 141.1 487.4 140.8 487.5C140.5 487.7 141.7 487.7 139.2 487.8C136.8 487.8 128.6 488.1 126.2 488.0C123.7 487.9 125.1 487.4 124.6 486.9C124.0 486.3 123.8 486.3 123.1 484.7C122.4 483.0 121.2 480.3 120.4 476.9C119.5 473.6 118.8 469.6 118.1 464.8C117.4 460.0 117.0 458.7 116.3 448.2C115.6 437.7 114.4 417.2 113.9 401.7C113.4 386.2 113.3 388.1 113.2 355.2C113.2 322.4 113.0 232.0 113.4 204.8C113.8 177.6 114.8 195.7 115.6 192.0C116.3 188.2 117.1 185.3 117.9 182.3C118.7 179.3 119.0 177.8 120.6 173.8C122.1 169.8 124.9 162.7 127.1 158.0C129.4 153.4 131.7 149.5 134.0 145.7C136.3 142.0 137.9 139.4 140.9 135.4C144.0 131.3 149.2 125.2 152.5 121.5C155.7 117.9 157.8 116.0 160.5 113.5C163.2 111.0 165.5 109.0 168.6 106.6C171.6 104.1 175.3 101.3 178.9 98.9C182.6 96.5 188.2 93.2 190.4 92.0C192.7 90.8 191.6 91.8 192.2 91.5C192.8 91.2 191.8 91.1 193.9 90.1C196.0 89.0 200.8 86.7 204.7 85.1C208.6 83.5 212.2 82.0 217.4 80.5C222.6 79.0 228.9 77.3 235.9 76.2C242.9 75.2 255.5 74.6 259.4 74.3C263.3 74.0 255.2 73.9 259.4 74.3ZM396.7 24.0C396.9 24.0 397.5 24.0 397.8 24.3C398.1 24.5 398.4 24.4 398.5 25.4C398.7 26.4 398.8 29.1 398.7 30.3C398.5 31.5 398.4 28.7 397.7 32.7C396.9 36.7 395.0 49.4 394.1 54.1C393.2 58.8 393.5 55.1 392.3 61.1C391.1 67.1 388.7 82.1 387.2 90.2C385.7 98.2 383.9 105.4 383.1 109.5C382.3 113.6 382.9 112.9 382.6 114.7C382.2 116.6 381.5 119.6 381.0 120.6C380.6 121.7 380.3 121.2 379.8 121.1C379.3 120.9 382.5 124.3 378.1 119.9C373.6 115.5 357.6 99.1 353.0 94.7C348.5 90.3 351.8 93.1 350.7 93.5C349.6 93.9 347.5 96.1 346.6 97.0C345.8 97.8 346.1 98.0 345.7 98.4C345.3 98.8 344.7 98.9 344.3 99.3C343.9 99.6 343.8 100.3 343.4 100.7C343.0 101.1 342.5 101.1 342.0 101.6C341.6 102.0 345.4 98.7 340.8 103.4C336.1 108.1 318.6 108.0 314.1 129.9C309.6 151.9 313.9 216.3 313.8 235.2C313.7 254.2 313.7 241.4 313.5 243.6C313.2 245.7 313.1 246.3 312.4 248.3C311.7 250.4 310.3 253.9 309.3 256.1C308.3 258.3 307.3 259.9 306.2 261.5C305.1 263.1 304.4 264.1 302.8 265.7C301.2 267.4 298.5 269.9 296.6 271.5C294.7 273.0 293.4 273.8 291.2 274.9C289.0 276.1 286.0 277.5 283.5 278.4C281.0 279.2 278.2 279.6 276.1 279.9C273.9 280.3 272.4 280.4 270.5 280.4C268.6 280.4 267.0 280.3 264.7 279.9C262.5 279.6 259.2 279.0 257.0 278.4C254.7 277.8 253.3 277.2 251.1 276.1C248.9 274.9 246.0 273.2 243.8 271.5C241.5 269.8 239.5 267.7 237.7 265.7C235.9 263.8 234.6 262.2 233.0 259.6C231.5 256.9 229.5 253.6 228.4 249.9C227.3 246.2 226.7 240.4 226.5 237.5C226.2 234.6 226.6 234.8 226.9 232.7C227.2 230.6 227.8 227.1 228.4 224.8C229.1 222.6 229.9 220.8 230.7 219.1C231.6 217.3 232.4 216.0 233.4 214.4C234.4 212.9 235.7 211.2 236.9 209.8C238.1 208.4 238.8 207.6 240.7 206.0C242.6 204.4 245.5 201.8 248.4 200.2C251.3 198.6 255.5 197.2 258.1 196.4C260.7 195.5 261.3 195.5 264.1 195.3C267.0 195.1 272.5 195.1 275.1 195.3C277.7 195.4 278.2 195.6 279.6 196.0C281.0 196.4 282.6 197.2 283.5 197.4C284.5 197.6 285.0 210.2 285.4 197.1C285.7 184.0 285.2 132.4 285.7 118.8C286.2 105.2 287.7 116.1 288.3 115.4C289.0 114.7 289.3 114.9 289.7 114.5C290.1 114.1 288.7 115.0 290.6 113.1C292.5 111.2 299.3 104.9 301.2 103.0C303.2 101.1 299.7 103.9 302.1 101.6C304.5 99.2 313.1 91.2 315.4 88.8C317.8 86.4 313.8 90.0 316.3 87.4C318.8 84.7 328.4 75.8 330.5 73.0C332.6 70.2 333.0 74.7 328.9 70.5C324.8 66.3 310.0 51.9 305.9 47.7C301.9 43.6 304.7 46.3 304.4 45.8C304.2 45.3 304.0 45.2 304.4 44.8C304.8 44.5 305.8 43.9 306.9 43.6C308.0 43.4 302.5 45.1 311.1 43.1C319.6 41.2 349.7 34.0 358.3 32.1C366.9 30.2 356.1 33.0 362.5 31.6C368.8 30.3 390.8 25.3 396.5 24.0C402.2 22.7 396.5 24.0 396.7 24.0ZM351.7 131.8C352.3 132.4 353.6 133.3 355.3 135.4C357.0 137.4 359.3 140.2 361.9 144.2C364.4 148.2 368.0 154.1 370.7 159.6C373.4 165.1 376.0 171.3 378.0 177.3C380.0 183.2 381.4 189.0 382.6 195.1C383.7 201.1 384.5 207.9 384.9 213.6C385.2 219.4 385.0 224.3 384.5 229.6C384.1 234.9 382.9 241.3 382.2 245.2C381.5 249.2 381.4 249.7 380.3 253.3C379.2 257.0 377.7 262.4 375.7 267.2C373.7 272.0 371.5 276.9 368.4 282.2C365.3 287.5 361.3 293.6 357.3 298.7C353.2 303.9 347.9 309.0 343.8 313.0C339.7 316.9 337.0 319.1 332.7 322.1C328.4 325.2 323.0 328.7 318.1 331.3C313.1 334.0 308.0 336.3 303.1 338.3C298.1 340.2 292.7 341.7 288.4 342.9C284.0 344.0 280.4 344.6 276.8 345.1C273.3 345.7 272.8 345.7 267.1 345.9C261.4 346.2 249.5 346.4 242.7 346.4C235.8 346.4 229.0 346.1 226.1 345.9C223.3 345.7 225.6 345.7 225.5 345.2C225.3 344.7 225.4 347.5 225.4 343.0C225.4 338.5 225.0 322.6 225.5 318.4C225.9 314.1 220.5 317.9 228.0 317.7C235.6 317.5 261.7 317.6 270.8 317.2C280.0 316.7 279.8 315.6 283.0 314.9C286.3 314.1 286.7 314.1 290.4 312.6C294.1 311.0 301.6 307.6 305.4 305.6C309.2 303.7 310.9 302.5 313.1 301.0C315.4 299.6 316.2 299.1 318.9 296.8C321.6 294.5 326.0 290.7 329.3 287.2C332.5 283.8 335.8 279.9 338.4 276.1C341.1 272.3 343.4 268.1 345.4 264.5C347.3 260.9 348.8 257.4 350.0 254.5C351.1 251.7 351.5 250.3 352.3 247.6C353.0 244.9 354.0 241.4 354.6 238.3C355.1 235.3 355.5 233.2 355.7 229.3C356.0 225.3 356.3 219.3 356.1 214.6C355.9 209.8 355.2 204.8 354.6 200.8C353.9 196.8 353.0 193.5 352.3 190.7C351.5 188.0 351.5 187.8 350.0 184.2C348.4 180.5 345.5 173.3 343.1 168.8C340.6 164.2 337.2 159.5 335.4 156.9C333.5 154.2 332.7 153.7 332.1 152.9C331.5 152.1 331.9 152.2 332.0 151.8C332.1 151.4 329.5 153.6 332.8 150.3C336.1 147.0 348.6 134.9 351.7 131.8C354.9 128.8 351.1 131.3 351.7 131.8Z"/>
+      </svg>
+      <span class="brand-name">Pulse</span>
     </div>
+    <button class="pill" id="btn-quick">Start Session</button>
   </header>
 
-  <div class="view-container">
-    
-    <!-- HOME VIEW: Robinhood List Style -->
-    <div id="home-view" class="view active">
-      <div class="ticker-list-container">
-        <div class="section-header-title">Workout Portfolio (100+ Mixes)</div>
-        <div id="portfolio-list">
-          <!-- Dynamically populated rows -->
+  <main class="main">
+    <!-- ================= PORTFOLIO ================= -->
+    <section id="view-portfolio" class="view active">
+      <div class="wrap">
+        <div class="hero">
+          <div class="hero-label">Total training time</div>
+          <div class="hero-value tnum" id="stat-total">0m</div>
+          <div class="hero-delta zero" id="stat-delta">No sessions yet</div>
+          <div class="stat-row">
+            <div class="stat"><b class="tnum" id="stat-sessions">0</b><span>Sessions</span></div>
+            <div class="stat"><b class="tnum" id="stat-streak">0</b><span>Day streak</span></div>
+            <div class="stat"><b class="tnum" id="stat-len">44m</b><span>Per session</span></div>
+          </div>
+          <div id="resume-slot"></div>
+        </div>
+
+        <div class="searchbar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+          </svg>
+          <input id="search" type="search" placeholder="Search workouts or equipment" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="list" id="list"></div>
+      </div>
+    </section>
+
+    <!-- ================= SESSION ================= -->
+    <section id="view-session" class="view">
+      <div class="wrap sess">
+        <div class="sess-top">
+          <button class="icon-btn" id="btn-back">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+            Portfolio
+          </button>
+          <div class="status-chips">
+            <div class="schip" id="chip-audio"><i class="dot"></i><span>Audio</span></div>
+            <div class="schip" id="chip-wake"><i class="dot"></i><span>Screen</span></div>
+          </div>
+        </div>
+
+        <div class="card timer-card">
+          <div class="badge work" id="s-badge">Work</div>
+          <div class="timer tnum" id="s-timer">45</div>
+          <div class="sess-title" id="s-title">—</div>
+          <div class="sess-next" id="s-next">—</div>
+          <div class="bar"><div class="bar-fill" id="s-bar"></div></div>
+          <div class="controls">
+            <button class="ctrl" id="btn-reset">Reset</button>
+            <button class="ctrl primary" id="btn-play">Start</button>
+            <button class="ctrl" id="btn-skip">Skip</button>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="chart-head">
+            <b id="chart-name">Session</b>
+            <span class="tnum" id="chart-time">0:00 / 44:00</span>
+          </div>
+          <div class="chart-wrap"><svg class="chart" id="chart" preserveAspectRatio="none"></svg></div>
+          <div class="chart-legend">
+            <div><i style="background:var(--brand)"></i>Work</div>
+            <div><i style="background:var(--warn)"></i>Rest</div>
+            <div><i style="background:var(--muted-2)"></i>Station change</div>
+          </div>
+        </div>
+
+        <div class="card blueprint" id="blueprint"></div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section id="view-settings" class="view">
+      <div class="wrap">
+        <div class="set-group">
+          <div class="eyebrow">Interval timing</div>
+          <div class="card set-card" id="timing-card"></div>
+          <div class="note" id="timing-note"></div>
+        </div>
+
+        <div class="set-group">
+          <div class="eyebrow">Sound</div>
+          <div class="card set-card">
+            <div class="set-row">
+              <div>
+                <div class="lbl">Music behaviour</div>
+                <div class="hint" id="sound-hint"></div>
+              </div>
+              <div class="seg" id="seg-sound">
+                <button data-v="transient">Duck</button>
+                <button data-v="ambient">Mix</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <div><div class="lbl">Cue volume</div></div>
+              <div class="stepper" id="step-vol">
+                <button data-d="-1">−</button><span class="val" id="val-vol">80%</span><button data-d="1">+</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <div>
+                <div class="lbl">Audio check</div>
+                <div class="hint">Play the real cue. Start Spotify first, then tap — music should keep playing.</div>
+              </div>
+              <button class="pill ghost" id="btn-test">Test</button>
+            </div>
+            <div class="diag" id="diag">Tap anywhere to initialise audio…</div>
+          </div>
+        </div>
+
+        <div class="set-group">
+          <div class="eyebrow">Display</div>
+          <div class="card set-card">
+            <div class="set-row">
+              <div>
+                <div class="lbl">Keep screen awake</div>
+                <div class="hint" id="wake-hint">Holds a screen wake lock while a session is running.</div>
+              </div>
+              <button class="sw on" id="sw-wake" role="switch" aria-checked="true"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="set-group">
+          <div class="eyebrow">Music</div>
+          <div class="card set-card">
+            <div class="set-row">
+              <div>
+                <div class="lbl">Open Spotify</div>
+                <div class="hint">Start your playlist, then come back to Pulse.</div>
+              </div>
+              <button class="pill ghost" id="btn-spotify">Open</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="set-group">
+          <div class="eyebrow">Data</div>
+          <div class="card set-card">
+            <div class="set-row">
+              <div>
+                <div class="lbl">Reset stats &amp; settings</div>
+                <div class="hint">Clears saved history and restores defaults.</div>
+              </div>
+              <button class="pill ghost" id="btn-wipe">Reset</button>
+            </div>
+          </div>
+          <div class="note">Pulse v2 · everything is stored on this device only.</div>
         </div>
       </div>
-    </div>
+    </section>
+  </main>
 
-    <!-- ACTIVE WORKOUT STANDALONE TAB VIEW -->
-    <div id="workout-view" class="view">
-      <div class="active-workout-view">
-        
-        <div class="back-nav-bar">
-          <button class="back-btn" onclick="switchView('home-view')">← Back to Portfolio</button>
-          <span id="active-ticker-symbol" style="font-weight: 800; color: var(--rh-yellow); font-size: 0.9rem;">WORKOUT #1</span>
-        </div>
+  <nav class="tabbar">
+    <button class="tab active" data-view="portfolio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-6 4 4 5-7 4 5"/><path d="M3 20h18"/></svg>
+      <span>Portfolio</span>
+    </button>
+    <button class="tab" data-view="session" id="tab-session" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+      <span>Session</span>
+    </button>
+    <button class="tab" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2v.2a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+</div>
 
-        <div class="workout-main-card">
-          <div class="workout-badge badge-work" id="w-badge">WORK</div>
-          <div class="workout-timer-large" id="w-timer">30</div>
-          <div class="workout-title-lg" id="w-title">Exercise A (Set 1)</div>
-          <div class="workout-subtitle-lg" id="w-subtitle">Superset 1 of 9 • 4-min Block</div>
+<div class="toast" id="toast"></div>
 
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="w-progress"></div>
-          </div>
+<script>
+"use strict";
+/* =========================================================================
+   Pulse — interval training timer
+   Design goals that drive the architecture below:
+     1. Beeps must be audible on iOS even with the physical silent switch on.
+     2. Spotify must keep playing while Pulse makes sound.
+     3. The screen must not sleep mid-session.
+   (1) and (2) are both solved by navigator.audioSession; (3) by Wake Lock.
+   ========================================================================= */
 
-          <div class="workout-controls-grid">
-            <button class="ctrl-btn" onclick="resetWorkoutTimer()">Reset</button>
-            <button class="ctrl-btn primary" id="w-start-btn" onclick="toggleWorkoutTimer()">START</button>
-            <button class="ctrl-btn" onclick="skipWorkoutInterval()">Skip</button>
-          </div>
-        </div>
+/* ---------------------------------------------------------------- catalogue */
+const TEMPLATES = [
+  { sym:"ROWR", name:"Concept2 Rower & DB Thrusters", category:"Hybrid Engine", pool:[
+    {a:"Concept2 Rower Sprints", b:"Dumbbell Thrusters"},
+    {a:"SkiErg Pulls", b:"Burpee Box Jumps"},
+    {a:"Assault Bike Calories", b:"Wall Ball Shots"},
+    {a:"Farmer's Carry", b:"Sled Push"},
+    {a:"Sandbag Cleans", b:"Overhead Lunges"}]},
+  { sym:"BIKE", name:"Assault AirBike & Push Press", category:"Cardio & Power", pool:[
+    {a:"Assault AirBike Sprints", b:"Barbell Push Press"},
+    {a:"Rowing Steady State", b:"Dumbbell Push Jerks"},
+    {a:"SkiErg Calorie Sprint", b:"Kettlebell Swings"},
+    {a:"Plate Pushes", b:"Med Ball Slams"},
+    {a:"Battle Ropes", b:"Jump Rope Double Unders"}]},
+  { sym:"SQUAT", name:"Barbell Squats & Box Jumps", category:"Lower Strength", pool:[
+    {a:"Barbell Back Squats", b:"Bodyweight Box Jumps"},
+    {a:"Front Squats", b:"Broad Jumps"},
+    {a:"Goblet Squats", b:"Bulgarian Split Squats"},
+    {a:"Leg Press", b:"Calf Raises"},
+    {a:"Trap Bar Deadlifts", b:"Box Step-ups"}]},
+  { sym:"CABLE", name:"Dual Cable Tower Stack", category:"Functional Core", pool:[
+    {a:"Cable Woodchoppers", b:"Cable Rope Face Pulls"},
+    {a:"Cable Chest Press", b:"Cable Lat Pulldowns"},
+    {a:"Cable Crossovers", b:"Cable Bicep Curls"},
+    {a:"Cable Tricep Pushdowns", b:"Cable Crunch"},
+    {a:"Single-Arm Cable Rows", b:"Cable Lateral Raises"}]},
+  { sym:"DBDL", name:"Dumbbell RDLs & Bent-Rows", category:"Posterior Chain", pool:[
+    {a:"Dumbbell Romanian Deadlifts", b:"Dumbbell Bent-Over Rows"},
+    {a:"Barbell Good Mornings", b:"Pendlay Rows"},
+    {a:"Single-Leg RDLs", b:"Chest-Supported Rows"},
+    {a:"DB Deadlifts", b:"Inverted Rows"},
+    {a:"Glute Bridges", b:"Seated Cable Rows"}]},
+  { sym:"HYBR", name:"Erg Intervals & Heavy Barbells", category:"Full Body Hybrid", pool:[
+    {a:"Concept2 Rower (Steady)", b:"Barbell Romanian Deadlifts"},
+    {a:"SkiErg Intervals", b:"Barbell Power Cleans"},
+    {a:"AirBike Sprints", b:"Deadlift & Shrug"},
+    {a:"Row & Ski Combo", b:"Thrusters"},
+    {a:"Assault Bike", b:"Push Ups"}]},
+  { sym:"SNAT", name:"AirBike & DB Snatches", category:"Explosive Power", pool:[
+    {a:"Assault AirBike Calories", b:"Dumbbell Alternating Snatches"},
+    {a:"Row Sprints", b:"Barbell Snatches"},
+    {a:"SkiErg Sprints", b:"Kettlebell Snatches"},
+    {a:"AirBike Active Recovery", b:"DB Clean & Jerk"},
+    {a:"Rowing Damper 10", b:"Power Snatches"}]},
+  { sym:"PULL", name:"Lat Pulldowns & Low Rows", category:"Upper Back Stack", pool:[
+    {a:"Cable Lat Pulldowns", b:"Cable Seated Low Rows"},
+    {a:"Pull-ups", b:"Barbell Rows"},
+    {a:"Chin-ups", b:"T-Bar Rows"},
+    {a:"Straight-Arm Pulldowns", b:"Dumbbell Shrugs"},
+    {a:"Neutral Grip Pulldowns", b:"Face Pulls"}]},
+  { sym:"BENCH", name:"Barbell & DB Bench Press", category:"Chest & Triceps", pool:[
+    {a:"Barbell Bench Press", b:"Dumbbell Floor Press"},
+    {a:"Incline DB Press", b:"Tricep Dips"},
+    {a:"Decline Bench Press", b:"Close-Grip Bench"},
+    {a:"Push-ups", b:"Diamond Push-ups"},
+    {a:"Chest Flyes", b:"Overhead Tricep Extension"}]},
+  { sym:"CARD", name:"Dual Cardio Machine Sprints", category:"Aerobic Engine", pool:[
+    {a:"Concept2 Rower (Sprint)", b:"Assault AirBike (Recovery)"},
+    {a:"SkiErg Sprint", b:"Concept2 Rower (Steady)"},
+    {a:"AirBike Sprint", b:"SkiErg Recovery"},
+    {a:"Treadmill Sprints", b:"AirBike Recovery"},
+    {a:"Rowing Intervals", b:"SkiErg Intervals"}]}
+];
 
-        <div class="exercise-sequence-box">
-          <div class="sequence-header">Workout Blueprint (45 min total)</div>
-          <div class="sequence-items" id="sequence-list">
-            <!-- Populated via JS -->
-          </div>
-        </div>
+const WORKOUTS = Array.from({length:100}, (_,i) => {
+  const t = TEMPLATES[i % TEMPLATES.length];
+  return { id:i, symbol:`${t.sym}${i+1}`, name:t.name, category:t.category, pool:t.pool };
+});
 
-      </div>
-    </div>
+/* ---------------------------------------------------------------- storage */
+const KEY = { settings:"pulse.v2.settings", stats:"pulse.v2.stats", resume:"pulse.v2.resume" };
+const DEFAULTS = { work:45, rest:15, setup:60, supersets:9, sets:2, soundMode:"transient", volume:0.8, wake:true };
 
-  </div>
+function load(key, fallback){
+  try { const raw = localStorage.getItem(key); return raw ? Object.assign({}, fallback, JSON.parse(raw)) : Object.assign({}, fallback); }
+  catch(_) { return Object.assign({}, fallback); }
+}
+function save(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(_){} }
 
-  <script>
-    const equipmentPairs = [
-      { sym: "ROWR", name: "Concept2 Rower & DB Thrusters", category: "Hybrid Engine", pool: [
-        {a: "Concept2 Rower Sprints", b: "Dumbbell Thrusters"},
-        {a: "SkiErg Pulls", b: "Burpee Box Jumps"},
-        {a: "Assault Bike Calories", b: "Wall Ball Shots"},
-        {a: "Farmer's Carry", b: "Sled Push"},
-        {a: "Sandbag Cleans", b: "Overhead Lunges"}
-      ]},
-      { sym: "BIKE", name: "Assault AirBike & Push Press", category: "Cardio & Power", pool: [
-        {a: "Assault AirBike Sprints", b: "Barbell Push Press"},
-        {a: "Rowing Steady State", b: "Dumbbell Push Jerks"},
-        {a: "SkiErg Calorie Sprint", b: "Kettlebell Swings"},
-        {a: "Plate Pushes", b: "Med Ball Slams"},
-        {a: "Battle Ropes", b: "Jump Rope Double Unders"}
-      ]},
-      { sym: "SQUAT", name: "Barbell Squats & Box Jumps", category: "Lower Strength", pool: [
-        {a: "Barbell Back Squats", b: "Bodyweight Box Jumps"},
-        {a: "Front Squats", b: "Broad Jumps"},
-        {a: "Goblet Squats", b: "Bulgarian Split Squats"},
-        {a: "Leg Press", b: "Calf Raises"},
-        {a: "Trap Bar Deadlifts", b: "Box Step-ups"}
-      ]},
-      { sym: "CABLE", name: "Dual Cable Tower Stack", category: "Functional Core", pool: [
-        {a: "Cable Woodchoppers", b: "Cable Rope Face Pulls"},
-        {a: "Cable Chest Press", b: "Cable Lat Pulldowns"},
-        {a: "Cable Crossovers", b: "Cable Bicep Curls"},
-        {a: "Cable Tricep Pushdowns", b: "Cable Crunch"},
-        {a: "Single-Arm Cable Rows", b: "Cable Lateral Raises"}
-      ]},
-      { sym: "DBDL", name: "Dumbbell RDLs & Bent-Rows", category: "Posterior Chain", pool: [
-        {a: "Dumbbell Romanian Deadlifts", b: "Dumbbell Bent-Over Rows"},
-        {a: "Barbell Good Mornings", b: "Pendlay Rows"},
-        {a: "Single-Leg RDLs", b: "Chest-Supported Rows"},
-        {a: "DB Deadlifts", b: "Inverted Rows"},
-        {a: "Glute Bridges", b: "Seated Cable Rows"}
-      ]},
-      { sym: "HYBR", name: "Erg Intervals & Heavy Barbells", category: "Full Body Hybrid", pool: [
-        {a: "Concept2 Rower (Steady)", b: "Barbell Romanian Deadlifts"},
-        {a: "SkiErg Intervals", b: "Barbell Power Cleans"},
-        {a: "AirBike Sprints", b: "Deadlift & Shrug"},
-        {a: "Row & Ski Combo", b: "Thrusters"},
-        {a: "Assault Bike", b: "Push Ups"}
-      ]},
-      { sym: "SNAT", name: "AirBike & DB Snatches", category: "Explosive Power", pool: [
-        {a: "Assault AirBike Calories", b: "Dumbbell Alternating Snatches"},
-        {a: "Row Sprints", b: "Barbell Snatches"},
-        {a: "SkiErg Sprints", b: "Kettlebell Snatches"},
-        {a: "AirBike Active Recovery", b: "DB Clean & Jerk"},
-        {a: "Rowing Damper 10", b: "Power Snatches"}
-      ]},
-      { sym: "PULL", name: "Lat Pulldowns & Low Rows", category: "Upper Back Stack", pool: [
-        {a: "Cable Lat Pulldowns", b: "Cable Seated Low Rows"},
-        {a: "Pull-ups", b: "Barbell Rows"},
-        {a: "Chin-ups", b: "T-Bar Rows"},
-        {a: "Straight-Arm Pulldowns", b: "Dumbbell Shrugs"},
-        {a: "Neutral Grip Pulldowns", b: "Face Pulls"}
-      ]},
-      { sym: "BENCH", name: "Barbell & DB Bench Press", category: "Chest & Triceps", pool: [
-        {a: "Barbell Bench Press", b: "Dumbbell Floor Press"},
-        {a: "Incline DB Press", b: "Tricep Dips"},
-        {a: "Decline Bench Press", b: "Close-Grip Bench"},
-        {a: "Push-ups", b: "Diamond Push-ups"},
-        {a: "Chest Flyes", b: "Overhead Tricep Extension"}
-      ]},
-      { sym: "CARD", name: "Dual Cardio Machine Sprints", category: "Aerobic Engine", pool: [
-        {a: "Concept2 Rower (Sprint)", b: "Assault AirBike (Recovery)"},
-        {a: "SkiErg Sprint", b: "Concept2 Rower (Steady)"},
-        {a: "AirBike Sprint", b: "SkiErg Recovery"},
-        {a: "Treadmill Sprints", b: "AirBike Recovery"},
-        {a: "Rowing Intervals", b: "SkiErg Intervals"}
-      ]}
-    ];
+let S = load(KEY.settings, DEFAULTS);
+let STATS = load(KEY.stats, { sessions:0, seconds:0, lastDay:null, streak:0, todaySeconds:0 });
 
-    // Generate 100 portfolio items
-    let portfolioWorkouts = [];
-    for (let i = 1; i <= 100; i++) {
-      const template = equipmentPairs[(i - 1) % equipmentPairs.length];
-      portfolioWorkouts.push({
-        id: i,
-        symbol: `${template.sym}${i}`,
-        name: `Workout #${i}: ${template.name}`,
-        category: template.category,
-        pool: template.pool
-      });
+/* ---------------------------------------------------------------- helpers */
+const $ = id => document.getElementById(id);
+const clamp = (v,lo,hi) => Math.min(hi, Math.max(lo, v));
+function mmss(sec){
+  sec = Math.max(0, Math.round(sec));
+  return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;
+}
+function humanDur(sec){
+  sec = Math.round(sec);
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+function todayKey(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+
+let toastTimer = null;
+function toast(msg){
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+}
+
+/* =========================================================================
+   AUDIO
+   ------------------------------------------------------------------------
+   iOS specifics this is built around:
+   · Raw Web Audio output is treated as an *ambient* session by default, which
+     means the hardware ring/silent switch mutes it. Setting
+     navigator.audioSession.type = 'transient' promotes it to a playback-class
+     session that mixes-and-ducks: beeps survive the silent switch AND Spotify
+     keeps playing.
+   · Where audioSession is unavailable (iOS < 16.4) media *elements* are still
+     exempt from the silent switch, so we fall back to a pool of <audio> tags
+     fed by a WAV we synthesise at runtime.
+   · Cues are scheduled ahead of time against the AudioContext clock rather
+     than fired from a JS timer, so main-thread jank can never drop a beep.
+   ========================================================================= */
+const Sound = {
+  ctx:null, master:null, ready:false, engine:"none",
+  wav:{}, pool:[], poolIdx:0, hasSessionApi:("audioSession" in navigator),
+
+  applySessionType(){
+    if(!this.hasSessionApi) return "unsupported";
+    try { navigator.audioSession.type = S.soundMode; return navigator.audioSession.type; }
+    catch(_) { return "error"; }
+  },
+
+  init(){
+    if(this.ready) return;
+    this.applySessionType();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(AC){
+      try{
+        this.ctx = new AC({ latencyHint:"interactive" });
+        this.master = this.ctx.createGain();
+        this.master.gain.value = S.volume;
+        this.master.connect(this.ctx.destination);
+        // One-sample silent buffer: the canonical iOS unlock.
+        const buf = this.ctx.createBuffer(1,1,22050);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf; src.connect(this.ctx.destination); src.start(0);
+        this.ctx.resume();
+        this.ctx.onstatechange = () => { updateStatusChips(); renderDiag(); };
+      }catch(_){ this.ctx = null; }
     }
+    this.buildElements();
+    // Without audioSession we cannot lift Web Audio above the silent switch,
+    // but media elements are exempt — so prefer them on older iOS.
+    this.engine = (!this.hasSessionApi && this.pool.length) ? "element"
+                : this.ctx ? "webaudio"
+                : this.pool.length ? "element" : "none";
+    this.ready = true;
+    updateStatusChips(); renderDiag();
+  },
 
-    let currentWorkoutIndex = 0;
-    let workoutQueue = [];
-    let queueIdx = 0;
-    let timeRemaining = 30;
-    let workoutTimerId = null;
-    let isWorkoutRunning = false;
-    let targetEndTime = null;
-    let audioCtx = null;
-    let lastBeepedSecond = null;
+  resume(){
+    if(this.ctx && this.ctx.state === "suspended") this.ctx.resume().catch(()=>{});
+  },
 
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    // Standard CrossFit-style gym clock beep generator (high pitched square wave beep)
-    function playClockBeep(isFinal = false) {
-      if (!audioCtx) return;
-      try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'square';
-        // 880 Hz for countdown beeps (5, 4, 3, 2), 1760 Hz high pitch for GO / interval change
-        osc.frequency.value = isFinal ? 1760 : 880;
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        const duration = isFinal ? 0.35 : 0.1;
-        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
-
-    function renderPortfolioList() {
-      const container = document.getElementById('portfolio-list');
-      container.innerHTML = '';
-      portfolioWorkouts.forEach((w, idx) => {
-        const row = document.createElement('div');
-        row.className = 'ticker-row';
-        row.innerHTML = `
-          <div class="ticker-info">
-            <h3>${w.symbol} — ${w.name}</h3>
-            <span>${w.category} • 45m Session</span>
-          </div>
-          <div class="ticker-action-badge">Train</div>
-        `;
-        row.onclick = () => startWorkout(idx);
-        container.appendChild(row);
-      });
-    }
-
-    function switchView(viewId) {
-      if (viewId === 'home-view') {
-        if (workoutTimerId) clearInterval(workoutTimerId);
-        isWorkoutRunning = false;
-      }
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById(viewId).classList.add('active');
-      window.scrollTo(0, 0);
-    }
-
-    function buildQueue(workoutObj) {
-      const q = [];
-      const supersetCount = 9;
-      for (let s = 0; s < supersetCount; s++) {
-        const pair = workoutObj.pool[s % workoutObj.pool.length];
-        
-        for (let setNum = 1; setNum <= 2; setNum++) {
-          q.push({
-            type: 'WORK',
-            duration: 30,
-            title: `${pair.a} (Set ${setNum})`,
-            next: `Rest / Switch → ${pair.b}`,
-            supersetNum: s + 1
-          });
-          q.push({
-            type: 'TRANSITION',
-            duration: 30,
-            title: `Rest / Prep`,
-            next: `Next: ${pair.b} (Set ${setNum})`,
-            supersetNum: s + 1
-          });
-
-          q.push({
-            type: 'WORK',
-            duration: 30,
-            title: `${pair.b} (Set ${setNum})`,
-            next: setNum < 2 ? `Rest / Switch → ${pair.a}` : (s < supersetCount - 1 ? `Station Setup (1 min)` : `Workout Complete`),
-            supersetNum: s + 1
-          });
-          q.push({
-            type: 'TRANSITION',
-            duration: 30,
-            title: `Rest / Prep`,
-            next: setNum < 2 ? `Next: ${pair.a} (Set 2)` : (s < supersetCount - 1 ? `Station Setup (1 min)` : `Finish`),
-            supersetNum: s + 1
-          });
-        }
-
-        if (s < supersetCount - 1) {
-          const nextPair = workoutObj.pool[(s + 1) % workoutObj.pool.length];
-          q.push({
-            type: 'SETUP',
-            duration: 60,
-            title: `Equipment Setup & Move`,
-            next: `Next Superset: ${nextPair.a} & ${nextPair.b}`,
-            supersetNum: s + 1
-          });
-        }
-      }
-      return q;
-    }
-
-    function startWorkout(index) {
-      currentWorkoutIndex = index;
-      const w = portfolioWorkouts[index];
-      workoutQueue = buildQueue(w);
-      queueIdx = 0;
-      timeRemaining = workoutQueue[0].duration;
-      lastBeepedSecond = null;
-
-      document.getElementById('active-ticker-symbol').innerText = `${w.symbol} — ${w.name}`;
-      
-      if (workoutTimerId) clearInterval(workoutTimerId);
-      isWorkoutRunning = false;
-      const btn = document.getElementById('w-start-btn');
-      btn.innerText = 'START';
-      btn.classList.remove('paused');
-
-      updateWorkoutDisplay();
-      renderSequenceList();
-      switchView('workout-view');
-    }
-
-    function renderSequenceList() {
-      const container = document.getElementById('sequence-list');
-      container.innerHTML = '';
-      const w = portfolioWorkouts[currentWorkoutIndex];
-      
-      const items = [
-        { label: "Structure", val: "9 Supersets (4 min work + 1 min setup)" },
-        { label: "Superset Format", val: "4 Sets total per pair (30s work / 30s rest)" },
-        { label: "Total Duration", val: "45 Minutes" },
-        { label: "Category", val: w.category }
-      ];
-
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'seq-item';
-        div.innerHTML = `<span>${item.label}</span><span>${item.val}</span>`;
-        container.appendChild(div);
-      });
-    }
-
-    function updateWorkoutDisplay() {
-      const timerEl = document.getElementById('w-timer');
-      if (queueIdx >= workoutQueue.length) {
-        document.getElementById('w-badge').innerText = 'COMPLETED';
-        document.getElementById('w-badge').className = 'workout-badge badge-work';
-        timerEl.innerText = '00';
-        timerEl.classList.remove('countdown-red');
-        document.getElementById('w-title').innerText = 'Workout Settled!';
-        document.getElementById('w-subtitle').innerText = '45-minute session successfully executed.';
-        document.getElementById('w-progress').style.width = '0%';
-        return;
-      }
-
-      const item = workoutQueue[queueIdx];
-      const badge = document.getElementById('w-badge');
-      if (item.type === 'WORK') {
-        badge.innerText = `Superset ${item.supersetNum} • WORK`;
-        badge.className = 'workout-badge badge-work';
-      } else if (item.type === 'TRANSITION') {
-        badge.innerText = `Superset ${item.supersetNum} • REST`;
-        badge.className = 'workout-badge badge-trans';
-      } else {
-        badge.innerText = `STATION CHANGE`;
-        badge.className = 'workout-badge badge-setup';
-      }
-
-      timerEl.innerText = String(Math.max(0, timeRemaining)).padStart(2, '0');
-      
-      // Highlight last 5 seconds in bright CrossFit red font
-      if (timeRemaining <= 5 && timeRemaining > 0) {
-        timerEl.classList.add('countdown-red');
-      } else {
-        timerEl.classList.remove('countdown-red');
-      }
-
-      document.getElementById('w-title').innerText = item.title;
-      document.getElementById('w-subtitle').innerText = item.next;
-
-      const pct = (timeRemaining / item.duration) * 100;
-      document.getElementById('w-progress').style.width = pct + '%';
-    }
-
-    function workoutTick() {
-      const now = Date.now();
-      timeRemaining = Math.round((targetEndTime - now) / 1000);
-
-      // Trigger CrossFit style beeps on exact second changes for the final 5 seconds (5, 4, 3, 2, 1)
-      if (timeRemaining <= 5 && timeRemaining >= 1 && timeRemaining !== lastBeepedSecond) {
-        playClockBeep(false);
-        lastBeepedSecond = timeRemaining;
-      }
-
-      if (timeRemaining <= 0) {
-        // High pitched GO / interval transition beep
-        playClockBeep(true);
-        queueIdx++;
-        lastBeepedSecond = null;
-        if (queueIdx < workoutQueue.length) {
-          timeRemaining = workoutQueue[queueIdx].duration;
-          targetEndTime = Date.now() + (timeRemaining * 1000);
-        } else {
-          clearInterval(workoutTimerId);
-          isWorkoutRunning = false;
-          document.getElementById('w-start-btn').innerText = 'START';
-          document.getElementById('w-start-btn').classList.remove('paused');
-        }
-      }
-      updateWorkoutDisplay();
-    }
-
-    function toggleWorkoutTimer() {
-      initAudio();
-      const btn = document.getElementById('w-start-btn');
-
-      if (!isWorkoutRunning) {
-        if (queueIdx >= workoutQueue.length) startWorkout(currentWorkoutIndex);
-        isWorkoutRunning = true;
-        btn.innerText = 'PAUSE';
-        btn.classList.add('paused');
-        targetEndTime = Date.now() + (timeRemaining * 1000);
-        workoutTimerId = setInterval(workoutTick, 100);
-      } else {
-        isWorkoutRunning = false;
-        btn.innerText = 'RESUME';
-        btn.classList.remove('paused');
-        clearInterval(workoutTimerId);
+  /* --- WAV synthesis for the element fallback ------------------------- */
+  renderWav(segs, total, sr){
+    sr = sr || 44100;
+    const n = Math.ceil(total * sr);
+    const pcm = new Int16Array(n);
+    for(const seg of segs){
+      const start = Math.floor(seg.at * sr), len = Math.floor(seg.dur * sr);
+      for(let i=0;i<len;i++){
+        const t = i / sr;
+        const attack  = Math.min(1, t / 0.006);
+        const release = Math.min(1, (seg.dur - t) / 0.035);
+        let v = Math.sin(2 * Math.PI * seg.f * t);
+        v = Math.sign(v) * Math.pow(Math.abs(v), 0.55);   // brighter than a sine
+        const idx = start + i;
+        if(idx < n) pcm[idx] = clamp(pcm[idx] + v * attack * release * seg.gain * 32767, -32768, 32767);
       }
     }
+    const bytes = new Uint8Array(44 + pcm.length * 2);
+    const dv = new DataView(bytes.buffer);
+    const str = (off,s) => { for(let i=0;i<s.length;i++) dv.setUint8(off+i, s.charCodeAt(i)); };
+    str(0,"RIFF"); dv.setUint32(4, 36 + pcm.length*2, true); str(8,"WAVEfmt ");
+    dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+    dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+    str(36,"data"); dv.setUint32(40, pcm.length*2, true);
+    for(let i=0;i<pcm.length;i++) dv.setInt16(44 + i*2, pcm[i], true);
+    let bin = "";
+    for(let i=0;i<bytes.length;i+=8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+8192));
+    return "data:audio/wav;base64," + btoa(bin);
+  },
 
-    function resetWorkoutTimer() {
-      if (workoutTimerId) clearInterval(workoutTimerId);
-      isWorkoutRunning = false;
-      startWorkout(currentWorkoutIndex);
-    }
+  cueSpec(kind){
+    if(kind === "count")  return { total:0.14, segs:[{at:0, dur:0.11, f:880,  gain:0.55}] };
+    if(kind === "go")     return { total:0.42, segs:[{at:0, dur:0.36, f:1760, gain:0.62}] };
+    return { total:1.05, segs:[                          // finish fanfare
+      {at:0.00, dur:0.16, f:1174, gain:0.55},
+      {at:0.22, dur:0.16, f:1568, gain:0.58},
+      {at:0.44, dur:0.50, f:2093, gain:0.62}] };
+  },
 
-    function skipWorkoutInterval() {
-      if (queueIdx < workoutQueue.length - 1) {
-        queueIdx++;
-        timeRemaining = workoutQueue[queueIdx].duration;
-        targetEndTime = Date.now() + (timeRemaining * 1000);
-        lastBeepedSecond = null;
-        updateWorkoutDisplay();
+  buildElements(){
+    try{
+      for(const kind of ["count","go","end"]){
+        const spec = this.cueSpec(kind);
+        this.wav[kind] = this.renderWav(spec.segs, spec.total);
       }
-    }
+      // A small pool avoids re-trigger latency on rapid consecutive cues.
+      for(let i=0;i<4;i++){
+        const a = new Audio();
+        a.preload = "auto"; a.playsInline = true;
+        this.pool.push(a);
+      }
+    }catch(_){ this.pool = []; }
+  },
 
-    renderPortfolioList();
-  </script>
+  /* --- playback -------------------------------------------------------- */
+  playElement(kind){
+    if(!this.pool.length) return;
+    const a = this.pool[this.poolIdx = (this.poolIdx + 1) % this.pool.length];
+    try{
+      a.src = this.wav[kind];
+      a.volume = clamp(S.volume, 0, 1);
+      a.currentTime = 0;
+      const p = a.play();
+      if(p && p.catch) p.catch(()=>{});
+    }catch(_){}
+  },
+
+  tone(when, f, dur, gain){
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(f, when);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(gain, when + 0.006);          // soft attack kills the click
+    g.gain.setValueAtTime(gain, when + Math.max(0.01, dur - 0.03));
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(when); o.stop(when + dur + 0.03);
+  },
+
+  /** Play `kind` after `delayMs` (may be <=0 for "right now"). */
+  cue(kind, delayMs){
+    delayMs = Math.max(0, delayMs || 0);
+    if(this.engine === "webaudio" && this.ctx){
+      this.resume();
+      const when = this.ctx.currentTime + delayMs / 1000;
+      for(const seg of this.cueSpec(kind).segs) this.tone(when + seg.at, seg.f, seg.dur, seg.gain);
+    } else if(this.engine === "element"){
+      if(delayMs < 20) this.playElement(kind);
+      else setTimeout(() => this.playElement(kind), delayMs);
+    }
+  },
+
+  setVolume(v){ if(this.master) this.master.gain.value = v; }
+};
+
+/* =========================================================================
+   WAKE LOCK
+   Safari drops the lock whenever the page hides, so it must be re-acquired on
+   every visibilitychange or it dies the first time you glance at another app.
+   ========================================================================= */
+const Wake = {
+  sentinel:null, supported:("wakeLock" in navigator), want:false,
+
+  async request(){
+    this.want = true;
+    if(!this.supported || !S.wake) { updateStatusChips(); return; }
+    if(this.sentinel && !this.sentinel.released) return;
+    try{
+      this.sentinel = await navigator.wakeLock.request("screen");
+      this.sentinel.addEventListener("release", () => updateStatusChips());
+    }catch(_){ this.sentinel = null; }
+    updateStatusChips();
+  },
+
+  async release(){
+    this.want = false;
+    try{ if(this.sentinel) await this.sentinel.release(); }catch(_){}
+    this.sentinel = null;
+    updateStatusChips();
+  },
+
+  get active(){ return !!(this.sentinel && !this.sentinel.released); }
+};
+
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible"){
+    Sound.resume();
+    if(Wake.want) Wake.request();
+    if(Timer.running) Timer.catchUp();   // re-sync after background throttling
+    renderDiag();
+  } else if(Timer.running){
+    persistResume();
+  }
+  updateStatusChips();
+});
+
+/* =========================================================================
+   QUEUE
+   ========================================================================= */
+function buildQueue(w){
+  const q = [];
+  for(let s=0; s<S.supersets; s++){
+    const pair = w.pool[s % w.pool.length];
+    const next = w.pool[(s+1) % w.pool.length];
+    for(let set=1; set<=S.sets; set++){
+      const lastSet = set === S.sets, lastSuper = s === S.supersets - 1;
+      q.push({ type:"WORK", duration:S.work, title:`${pair.a} (Set ${set})`,
+               next:`Rest ${S.rest}s → ${pair.b}`, superset:s+1 });
+      q.push({ type:"REST", duration:S.rest, title:"Rest / Switch",
+               next:`Next: ${pair.b} (Set ${set})`, superset:s+1 });
+      q.push({ type:"WORK", duration:S.work, title:`${pair.b} (Set ${set})`,
+               next: !lastSet ? `Rest ${S.rest}s → ${pair.a}`
+                    : lastSuper ? "Final rest — nearly there" : "Station change next",
+               superset:s+1 });
+      q.push({ type:"REST", duration:S.rest, title:"Rest / Switch",
+               next: !lastSet ? `Next: ${pair.a} (Set ${set+1})`
+                    : lastSuper ? "Session complete" : "Station change next",
+               superset:s+1 });
+    }
+    if(s < S.supersets - 1){
+      q.push({ type:"SETUP", duration:S.setup, title:"Station change",
+               next:`Next up: ${next.a} & ${next.b}`, superset:s+1 });
+    }
+  }
+  return q;
+}
+const queueSeconds = q => q.reduce((a,b) => a + b.duration, 0);
+
+/* =========================================================================
+   TIMER
+   Monotonic deadline scheduling: each interval's end is derived by *adding* to
+   the previous deadline, so rounding never accumulates across a session.
+   ========================================================================= */
+const Timer = {
+  workout:null, queue:[], idx:0, running:false, finished:false,
+  deadline:0,      // performance.now() ms at which the current interval ends
+  remainMs:0,      // ms left, authoritative while paused
+  scheduled:new Set(),
+  endCued:false,   // the finish cue may already be queued on the audio clock
+  schedulerId:null, rafId:null,
+
+  loadWorkout(w, opts){
+    opts = opts || {};
+    this.stop();
+    this.workout = w;
+    this.queue = buildQueue(w);
+    this.idx = opts.idx || 0;
+    this.finished = false;
+    this.endCued = false;
+    this.remainMs = opts.remainMs != null ? opts.remainMs : this.queue[this.idx].duration * 1000;
+    this.scheduled.clear();
+    renderSession(true);
+  },
+
+  start(){
+    if(this.finished || !this.queue.length) return;
+    Sound.init();
+    Sound.resume();
+    this.running = true;
+    this.deadline = performance.now() + this.remainMs;
+    this.scheduled.clear();
+    if(S.wake) Wake.request();
+    this.schedulerId = setInterval(() => this.schedule(), 100);
+    this.loop();
+    renderControls();
+  },
+
+  pause(){
+    if(!this.running) return;
+    this.remainMs = Math.max(0, this.deadline - performance.now());
+    this.running = false;
+    clearInterval(this.schedulerId); this.schedulerId = null;
+    cancelAnimationFrame(this.rafId); this.rafId = null;
+    this.scheduled.clear();
+    Wake.release();
+    persistResume();
+    renderControls();
+  },
+
+  stop(){
+    this.running = false;
+    clearInterval(this.schedulerId); this.schedulerId = null;
+    cancelAnimationFrame(this.rafId); this.rafId = null;
+    this.scheduled.clear();
+    Wake.release();
+  },
+
+  toggle(){ this.running ? this.pause() : this.start(); },
+
+  reset(){
+    const w = this.workout;
+    if(!w) return;
+    this.loadWorkout(w);
+    clearResume();
+  },
+
+  skip(){
+    if(!this.queue.length || this.finished) return;
+    if(this.idx >= this.queue.length - 1){ this.complete(); return; }
+    this.idx++;
+    this.remainMs = this.queue[this.idx].duration * 1000;
+    if(this.running) this.deadline = performance.now() + this.remainMs;
+    this.scheduled.clear();
+    this.endCued = false;
+    renderSession(true);
+  },
+
+  /** Advance past every interval whose deadline has passed. */
+  catchUp(){
+    let guard = 0;
+    while(this.running && !this.finished && performance.now() >= this.deadline && guard++ < 5000){
+      if(this.idx >= this.queue.length - 1){ this.complete(); return; }
+      this.idx++;
+      this.deadline += this.queue[this.idx].duration * 1000;   // no drift accumulation
+      this.scheduled.clear();
+      renderStatic();
+    }
+  },
+
+  complete(){
+    this.stop();
+    this.finished = true;
+    this.remainMs = 0;
+    if(!this.endCued) Sound.cue("end", 0);   // scheduler already queued it on a natural finish
+    recordCompletion(queueSeconds(this.queue));
+    clearResume();
+    renderSession(true);
+    toast("Session complete — nice work.");
+  },
+
+  get msLeft(){ return this.running ? Math.max(0, this.deadline - performance.now()) : this.remainMs; },
+  get current(){ return this.queue[this.idx] || null; },
+
+  /** Look 1.5 s ahead and hand upcoming cues to the audio clock. */
+  schedule(){
+    if(!this.running) return;
+    const now = performance.now(), horizon = now + 1500, d = this.deadline;
+    const isLast = this.idx >= this.queue.length - 1;
+    const cues = [[d - 3000,"count"], [d - 2000,"count"], [d - 1000,"count"], [d, isLast ? "end" : "go"]];
+    for(const [at, kind] of cues){
+      if(at > horizon || at < now - 120) continue;
+      const key = this.idx + ":" + Math.round(at);
+      if(this.scheduled.has(key)) continue;
+      this.scheduled.add(key);
+      if(kind === "end") this.endCued = true;
+      Sound.cue(kind, at - now);
+    }
+  },
+
+  loop(){
+    this.catchUp();
+    if(!this.running) return;
+    renderTick();
+    this.rafId = requestAnimationFrame(() => this.loop());
+  }
+};
+
+/* =========================================================================
+   STATS + RESUME
+   ========================================================================= */
+function recordCompletion(seconds){
+  const today = todayKey();
+  if(STATS.lastDay !== today){
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yKey = `${y.getFullYear()}-${y.getMonth()+1}-${y.getDate()}`;
+    STATS.streak = (STATS.lastDay === yKey) ? (STATS.streak || 0) + 1 : 1;
+    STATS.lastDay = today;
+    STATS.todaySeconds = 0;
+  }
+  STATS.sessions = (STATS.sessions || 0) + 1;
+  STATS.seconds = (STATS.seconds || 0) + seconds;
+  STATS.todaySeconds = (STATS.todaySeconds || 0) + seconds;
+  save(KEY.stats, STATS);
+  renderStats();
+}
+
+function persistResume(){
+  if(!Timer.workout || Timer.finished) return;
+  save(KEY.resume, { id:Timer.workout.id, idx:Timer.idx, remainMs:Math.round(Timer.msLeft), ts:Date.now() });
+}
+function clearResume(){ try{ localStorage.removeItem(KEY.resume); }catch(_){} renderResume(); }
+
+function renderResume(){
+  const slot = $("resume-slot");
+  slot.innerHTML = "";
+  let r = null;
+  try{ r = JSON.parse(localStorage.getItem(KEY.resume) || "null"); }catch(_){}
+  if(!r || Date.now() - r.ts > 6*3600*1000) return;
+  const w = WORKOUTS[r.id];
+  if(!w) return;
+  const el = document.createElement("div");
+  el.className = "resume";
+  el.innerHTML = `<div>Resume ${w.symbol}<small>Paused at interval ${r.idx+1} · ${mmss(r.remainMs/1000)} left</small></div>`;
+  const btn = document.createElement("button");
+  btn.className = "pill"; btn.textContent = "Resume";
+  btn.onclick = () => { openWorkout(r.id, { idx:r.idx, remainMs:r.remainMs }); };
+  el.appendChild(btn);
+  slot.appendChild(el);
+}
+
+/* =========================================================================
+   RENDER — portfolio
+   ========================================================================= */
+function renderStats(){
+  $("stat-total").textContent = humanDur(STATS.seconds || 0);
+  $("stat-sessions").textContent = STATS.sessions || 0;
+  $("stat-streak").textContent = STATS.streak || 0;
+  $("stat-len").textContent = humanDur(queueSeconds(buildQueue(WORKOUTS[0])));
+  const d = $("stat-delta");
+  const today = (STATS.lastDay === todayKey()) ? (STATS.todaySeconds || 0) : 0;
+  if(today > 0){ d.className = "hero-delta"; d.textContent = `▲ ${humanDur(today)} today`; }
+  else if(STATS.sessions){ d.className = "hero-delta zero"; d.textContent = `${STATS.sessions} session${STATS.sessions>1?"s":""} logged`; }
+  else { d.className = "hero-delta zero"; d.textContent = "No sessions yet"; }
+}
+
+/** Tiny pulse-waveform sparkline — the visual signature of the brand.
+ *  Paired points per level so it draws as a square pulse train (matching the
+ *  session chart), not a diagonal zigzag. */
+function sparkline(seed){
+  const n = 9, W = 40, H = 22, hi = 4, lo = H - 4, pts = [];
+  for(let i=0;i<n;i++){
+    const y = (i + seed) % 3 !== 2 ? hi : lo;
+    const x0 = i / n * W, x1 = (i + 1) / n * W;
+    pts.push(`${x0.toFixed(1)},${y}`, `${x1.toFixed(1)},${y}`);
+  }
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" fill="none" aria-hidden="true">`
+       + `<polyline points="${pts.join(" ")}" stroke="var(--brand)" stroke-width="1.8" `
+       + `stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity=".8"/></svg>`;
+}
+
+let activeCategory = "All";
+const CATEGORIES = ["All", ...Array.from(new Set(TEMPLATES.map(t => t.category)))];
+
+function renderChips(){
+  const box = $("chips");
+  box.innerHTML = "";
+  for(const c of CATEGORIES){
+    const b = document.createElement("button");
+    b.className = "chip" + (c === activeCategory ? " active" : "");
+    b.textContent = c;
+    b.onclick = () => { activeCategory = c; renderChips(); renderList(); };
+    box.appendChild(b);
+  }
+}
+
+function renderList(){
+  const q = $("search").value.trim().toLowerCase();
+  const box = $("list");
+  const frag = document.createDocumentFragment();
+  let count = 0;
+  for(const w of WORKOUTS){
+    if(activeCategory !== "All" && w.category !== activeCategory) continue;
+    if(q){
+      const hay = (w.symbol + " " + w.name + " " + w.category + " " +
+                   w.pool.map(p => p.a + " " + p.b).join(" ")).toLowerCase();
+      if(!hay.includes(q)) continue;
+    }
+    const row = document.createElement("button");
+    row.className = "row";
+    row.innerHTML =
+      `<div class="row-l">
+         <div class="row-sym">${w.symbol}</div>
+         <div class="row-name">${w.name}</div>
+         <div class="row-sub">${w.category} · ${w.pool.length} pairs</div>
+       </div>
+       <div class="row-r">${sparkline(w.id)}<div class="row-go">Train</div></div>`;
+    row.onclick = () => openWorkout(w.id);
+    frag.appendChild(row);
+    count++;
+  }
+  box.innerHTML = "";
+  if(!count){
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = "No workouts match that search.";
+    box.appendChild(e);
+  } else box.appendChild(frag);
+}
+
+/* =========================================================================
+   RENDER — session
+   ========================================================================= */
+const BADGE = { WORK:["work","Work"], REST:["rest","Rest"], SETUP:["setup","Station change"] };
+
+function renderStatic(){
+  const t = Timer, item = t.current;
+  if(!item) return;
+  const [cls, label] = BADGE[item.type];
+  const badge = $("s-badge");
+  badge.className = "badge " + cls;
+  badge.textContent = item.type === "SETUP" ? label : `Superset ${item.superset} · ${label}`;
+  $("s-title").textContent = item.title;
+  $("s-next").textContent = item.next;
+  $("s-bar").className = "bar-fill" + (item.type === "REST" ? " rest" : item.type === "SETUP" ? " setup" : "");
+}
+
+function renderTick(){
+  const t = Timer;
+  if(t.finished || !t.current) return;
+  const item = t.current;
+  const leftMs = t.msLeft;
+  const secs = Math.ceil(leftMs / 1000);          // ceil: "45" shows for a full second
+  const el = $("s-timer");
+  const txt = String(Math.max(0, secs));
+  if(el.textContent !== txt) el.textContent = txt;
+  el.classList.toggle("urgent", secs <= 3 && secs > 0);
+
+  const frac = clamp(leftMs / (item.duration * 1000), 0, 1);
+  $("s-bar").style.transform = `scaleX(${frac})`;
+
+  // elapsed across the whole session
+  let elapsed = 0;
+  for(let i=0;i<t.idx;i++) elapsed += t.queue[i].duration;
+  elapsed += item.duration - leftMs/1000;
+  const total = queueSeconds(t.queue);
+  $("chart-time").textContent = `${mmss(elapsed)} / ${mmss(total)}`;
+  updatePlayhead(clamp(elapsed / total, 0, 1));
+}
+
+function renderControls(){
+  const btn = $("btn-play");
+  btn.classList.toggle("running", Timer.running);
+  btn.textContent = Timer.finished ? "Again" : Timer.running ? "Pause" : (Timer.msLeft < (Timer.current ? Timer.current.duration*1000 : 0) ? "Resume" : "Start");
+}
+
+function renderSession(full){
+  const t = Timer;
+  if(!t.workout) return;
+  $("chart-name").textContent = `${t.workout.symbol} · ${t.workout.name}`;
+  // Must precede the state branches: drawChart() resets the playhead to 0,
+  // and the branches below are what put it back in the right place.
+  if(full){ drawChart(); renderBlueprint(); }
+
+  if(t.finished){
+    const badge = $("s-badge");
+    badge.className = "badge done"; badge.textContent = "Complete";
+    $("s-timer").textContent = "0";
+    $("s-timer").classList.remove("urgent");
+    $("s-title").textContent = "Session complete";
+    $("s-next").textContent = `${humanDur(queueSeconds(t.queue))} of work in the books.`;
+    $("s-bar").style.transform = "scaleX(0)";
+    $("chart-time").textContent = `${mmss(queueSeconds(t.queue))} / ${mmss(queueSeconds(t.queue))}`;
+    updatePlayhead(1);
+  } else {
+    renderStatic();
+    $("s-timer").textContent = String(Math.ceil(t.msLeft/1000));
+    $("s-bar").style.transform = `scaleX(${clamp(t.msLeft/(t.current.duration*1000),0,1)})`;
+    renderTickStaticTime();
+  }
+  renderControls();
+}
+
+function renderTickStaticTime(){
+  const t = Timer;
+  let elapsed = 0;
+  for(let i=0;i<t.idx;i++) elapsed += t.queue[i].duration;
+  elapsed += t.current.duration - t.msLeft/1000;
+  const total = queueSeconds(t.queue);
+  $("chart-time").textContent = `${mmss(elapsed)} / ${mmss(total)}`;
+  updatePlayhead(clamp(elapsed/total, 0, 1));
+}
+
+function renderBlueprint(){
+  const t = Timer, total = queueSeconds(t.queue);
+  const rows = [
+    ["Structure", `${S.supersets} supersets · ${S.sets} sets per pair`],
+    ["Intervals", `${S.work}s work / ${S.rest}s rest`],
+    ["Station change", `${S.setup}s between supersets`],
+    ["Total duration", humanDur(total)],
+    ["Category", t.workout.category]
+  ];
+  $("blueprint").innerHTML = rows.map(r => `<div class="bp-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join("");
+}
+
+/* ---- the session chart: a literal pulse waveform of the whole workout ---- */
+const CH = { w:600, h:88 };
+function drawChart(){
+  const t = Timer, q = t.queue, total = queueSeconds(q);
+  const LEVEL = { WORK:1, REST:0.42, SETUP:0.14 };
+  const top = 8, bottom = CH.h - 6, span = bottom - top;
+  let x = 0;
+  const pts = [];
+  for(const it of q){
+    const y = bottom - span * LEVEL[it.type];
+    pts.push([x, y]);
+    x += it.duration / total * CH.w;
+    pts.push([x, y]);
+  }
+  const line = pts.map((p,i) => `${i?"L":"M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("");
+  const area = `${line}L${CH.w} ${bottom}L0 ${bottom}Z`;
+
+  $("chart").setAttribute("viewBox", `0 0 ${CH.w} ${CH.h}`);
+  $("chart").innerHTML = `
+    <defs>
+      <linearGradient id="g-fill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--brand)" stop-opacity=".26"/>
+        <stop offset="100%" stop-color="var(--brand)" stop-opacity="0"/>
+      </linearGradient>
+      <clipPath id="clip-done"><rect id="clip-rect" x="0" y="0" width="0" height="${CH.h}"/></clipPath>
+    </defs>
+    <path d="${area}" fill="url(#g-fill)" opacity=".5"/>
+    <path d="${line}" fill="none" stroke="var(--muted-2)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <g clip-path="url(#clip-done)">
+      <path d="${area}" fill="url(#g-fill)"/>
+      <path d="${line}" fill="none" stroke="var(--brand)" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    </g>
+    <line id="ph-line" x1="0" y1="0" x2="0" y2="${CH.h}" stroke="var(--brand)" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".55"/>
+    <circle id="ph-dot" cx="0" cy="${bottom}" r="3.5" fill="var(--brand)"/>`;
+  Chart.pts = pts; Chart.bottom = bottom;
+  updatePlayhead(0);
+}
+
+const Chart = { pts:[], bottom:0 };
+function updatePlayhead(frac){
+  const rect = document.getElementById("clip-rect");
+  if(!rect) return;
+  const x = frac * CH.w;
+  rect.setAttribute("width", x.toFixed(1));
+  const line = document.getElementById("ph-line"), dot = document.getElementById("ph-dot");
+  line.setAttribute("x1", x.toFixed(1)); line.setAttribute("x2", x.toFixed(1));
+  // y at the playhead, walking the step points
+  let y = Chart.bottom;
+  for(let i=0;i<Chart.pts.length;i++){ if(Chart.pts[i][0] <= x) y = Chart.pts[i][1]; else break; }
+  dot.setAttribute("cx", x.toFixed(1)); dot.setAttribute("cy", y.toFixed(1));
+}
+
+/* =========================================================================
+   RENDER — settings
+   ========================================================================= */
+const TIMING = [
+  { key:"work",      label:"Work",           min:5,  max:300, step:5, unit:"s" },
+  { key:"rest",      label:"Rest",           min:5,  max:300, step:5, unit:"s" },
+  { key:"setup",     label:"Station change", min:0,  max:300, step:15, unit:"s" },
+  { key:"supersets", label:"Supersets",      min:1,  max:20,  step:1, unit:"" },
+  { key:"sets",      label:"Sets per pair",  min:1,  max:10,  step:1, unit:"" }
+];
+
+function renderTiming(){
+  const card = $("timing-card");
+  card.innerHTML = "";
+  for(const t of TIMING){
+    const row = document.createElement("div");
+    row.className = "set-row";
+    row.innerHTML = `<div><div class="lbl">${t.label}</div></div>
+      <div class="stepper">
+        <button data-d="-1" aria-label="Decrease ${t.label}">−</button>
+        <span class="val tnum">${S[t.key]}${t.unit}</span>
+        <button data-d="1" aria-label="Increase ${t.label}">+</button>
+      </div>`;
+    row.querySelectorAll("button").forEach(b => {
+      b.onclick = () => {
+        S[t.key] = clamp(S[t.key] + Number(b.dataset.d) * t.step, t.min, t.max);
+        save(KEY.settings, S);
+        renderTiming(); renderTimingNote(); renderStats();
+        if(Timer.workout && !Timer.running){ Timer.loadWorkout(Timer.workout); }
+      };
+    });
+    card.appendChild(row);
+  }
+}
+function renderTimingNote(){
+  const q = buildQueue(WORKOUTS[0]);
+  $("timing-note").textContent =
+    `One session runs ${mmss(queueSeconds(q))} across ${q.length} intervals. Changing these rebuilds every workout.`;
+}
+
+function renderSoundSeg(){
+  document.querySelectorAll("#seg-sound button").forEach(b =>
+    b.classList.toggle("active", b.dataset.v === S.soundMode));
+  $("sound-hint").textContent = S.soundMode === "transient"
+    ? "Music dips briefly for each cue. Cues stay audible even with the silent switch on."
+    : "Cues layer over the music without dipping it — but iOS mutes them when the silent switch is on.";
+}
+
+function renderDiag(){
+  const parts = [];
+  parts.push(`engine       ${Sound.engine === "none" ? "<em>none</em>" : "<b>" + Sound.engine + "</b>"}`);
+  parts.push(`audioSession ${Sound.hasSessionApi ? "<b>" + (navigator.audioSession ? navigator.audioSession.type : "?") + "</b>" : "<em>unsupported (iOS < 16.4)</em>"}`);
+  parts.push(`context      ${Sound.ctx ? (Sound.ctx.state === "running" ? "<b>running</b>" : "<em>" + Sound.ctx.state + "</em>") : "<em>none</em>"}`);
+  parts.push(`wake lock    ${!Wake.supported ? "<em>unsupported</em>" : Wake.active ? "<b>held</b>" : "idle"}`);
+  parts.push(`secure ctx   ${window.isSecureContext ? "<b>yes</b>" : "<em>no — wake lock needs HTTPS</em>"}`);
+  parts.push(`standalone   ${(window.navigator.standalone || matchMedia("(display-mode: standalone)").matches) ? "<b>yes</b>" : "no (open from Home Screen)"}`);
+  $("diag").innerHTML = parts.join("\n");
+}
+
+function updateStatusChips(){
+  const a = $("chip-audio"), w = $("chip-wake");
+  if(!Sound.ready){ a.className = "schip"; a.lastElementChild.textContent = "Audio"; }
+  else if(Sound.engine === "none"){ a.className = "schip warn"; a.lastElementChild.textContent = "No audio"; }
+  else if(!Sound.hasSessionApi){ a.className = "schip warn"; a.lastElementChild.textContent = "Audio (legacy)"; }
+  else { a.className = "schip on"; a.lastElementChild.textContent = S.soundMode === "transient" ? "Duck" : "Mix"; }
+
+  if(!Wake.supported){ w.className = "schip warn"; w.lastElementChild.textContent = "No wake lock"; }
+  else if(Wake.active){ w.className = "schip on"; w.lastElementChild.textContent = "Screen on"; }
+  else { w.className = "schip"; w.lastElementChild.textContent = "Screen"; }
+}
+
+/* =========================================================================
+   NAVIGATION
+   ========================================================================= */
+function switchView(name){
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  $("view-" + name).classList.add("active");
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
+  window.scrollTo(0, 0);
+  if(name === "settings"){ renderDiag(); }
+}
+
+function openWorkout(id, opts){
+  const w = WORKOUTS[id];
+  if(!w) return;
+  Sound.init();                 // called from a tap — the iOS unlock gesture
+  Timer.loadWorkout(w, opts);
+  $("tab-session").disabled = false;
+  switchView("session");
+  renderResume();
+}
+
+/* =========================================================================
+   WIRING
+   ========================================================================= */
+document.querySelectorAll(".tab").forEach(t => {
+  t.onclick = () => { if(!t.disabled) switchView(t.dataset.view); };
+});
+$("btn-quick").onclick = () => openWorkout(Timer.workout ? Timer.workout.id : 0);
+$("btn-back").onclick  = () => switchView("portfolio");
+$("btn-play").onclick  = () => { if(Timer.finished) Timer.reset(); else Timer.toggle(); };
+$("btn-reset").onclick = () => { Timer.reset(); toast("Session reset"); };
+$("btn-skip").onclick  = () => Timer.skip();
+
+$("search").addEventListener("input", renderList);
+
+document.querySelectorAll("#seg-sound button").forEach(b => {
+  b.onclick = () => {
+    S.soundMode = b.dataset.v;
+    save(KEY.settings, S);
+    Sound.init();
+    Sound.applySessionType();
+    renderSoundSeg(); renderDiag(); updateStatusChips();
+  };
+});
+
+$("step-vol").querySelectorAll("button").forEach(b => {
+  b.onclick = () => {
+    S.volume = clamp(Math.round((S.volume + Number(b.dataset.d) * 0.1) * 10) / 10, 0.1, 1);
+    save(KEY.settings, S);
+    Sound.setVolume(S.volume);
+    $("val-vol").textContent = Math.round(S.volume * 100) + "%";
+  };
+});
+
+$("btn-test").onclick = () => {
+  Sound.init();
+  Sound.applySessionType();
+  Sound.cue("count", 0);
+  Sound.cue("count", 400);
+  Sound.cue("go", 800);
+  renderDiag(); updateStatusChips();
+  toast(Sound.engine === "none" ? "No audio engine available" : "Playing cue…");
+};
+
+$("sw-wake").onclick = () => {
+  S.wake = !S.wake;
+  save(KEY.settings, S);
+  $("sw-wake").classList.toggle("on", S.wake);
+  $("sw-wake").setAttribute("aria-checked", String(S.wake));
+  if(S.wake && Timer.running) Wake.request(); else Wake.release();
+};
+
+$("btn-spotify").onclick = () => { location.href = "spotify://"; };
+
+$("btn-wipe").onclick = () => {
+  if(!confirm("Reset all stats and settings?")) return;
+  try{ localStorage.removeItem(KEY.settings); localStorage.removeItem(KEY.stats); localStorage.removeItem(KEY.resume); }catch(_){}
+  S = Object.assign({}, DEFAULTS);
+  STATS = { sessions:0, seconds:0, lastDay:null, streak:0, todaySeconds:0 };
+  boot(); toast("Reset done");
+};
+
+// First touch anywhere unlocks audio — iOS requires a user gesture.
+["touchend","mousedown","keydown"].forEach(ev =>
+  window.addEventListener(ev, function once(){
+    Sound.init();
+    ["touchend","mousedown","keydown"].forEach(e2 => window.removeEventListener(e2, once));
+  }, { passive:true }));
+
+window.addEventListener("beforeunload", () => { if(Timer.running) persistResume(); });
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+function boot(){
+  renderStats();
+  renderChips();
+  renderList();
+  renderResume();
+  renderTiming();
+  renderTimingNote();
+  renderSoundSeg();
+  $("val-vol").textContent = Math.round(S.volume * 100) + "%";
+  $("sw-wake").classList.toggle("on", S.wake);
+  $("sw-wake").setAttribute("aria-checked", String(S.wake));
+  updateStatusChips();
+  renderDiag();
+}
+boot();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+// exposed for the test harness
+window.__pulse = { Timer, Sound, Wake, buildQueue, queueSeconds, WORKOUTS, get S(){ return S; } };
+</script>
 </body>
 </html>
