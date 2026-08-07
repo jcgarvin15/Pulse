@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pulse">
+  <meta name="theme-color" content="#000000">
+  <title>Pulse — Workout Portfolio & Live Ticker</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --card-bg: #121212;
+      --card-border: #1E1E1E;
+      --rh-green: #00C805;
+      --rh-red: #FF5533;
+      --rh-yellow: #CCFF00;
+      --text-main: #FFFFFF;
+      --text-muted: #8C8C8C;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Views container */
+    .view-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    .view.active {
+      display: flex;
+    }
+
+    /* Navbar */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: sticky;
+      top: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(20px);
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-container {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-container svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rh-pill-btn {
+      background: var(--rh-yellow);
+      color: #000000;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 16px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .rh-pill-btn:hover { opacity: 0.9; }
+    .rh-pill-btn:active { transform: scale(0.96); }
+
+    /* Home View: Robinhood List Style */
+    .ticker-list-container {
+      max-width: 680px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px 60px 16px;
+    }
+
+    .section-header-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .ticker-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 16px;
+      border-bottom: 1px solid var(--card-border);
+      cursor: pointer;
+      transition: background 0.15s;
+      border-radius: 12px;
+    }
+
+    .ticker-row:hover {
+      background: #0A0A0A;
+    }
+
+    .ticker-info h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 2px;
+    }
+
+    .ticker-info span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .ticker-action-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #000;
+      background: var(--rh-yellow);
+      padding: 6px 14px;
+      border-radius: 16px;
+    }
+
+    /* Active Workout Standalone Tab View */
+    .active-workout-view {
+      max-width: 540px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .back-nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .back-btn {
+      background: #1A1A1A;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .workout-main-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 32px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      margin-bottom: 24px;
+    }
+
+    .workout-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .badge-work { background: rgba(0, 200, 5, 0.15); color: var(--rh-green); }
+    .badge-trans { background: rgba(255, 184, 0, 0.15); color: #FFB800; }
+    .badge-setup { background: rgba(140, 140, 140, 0.15); color: #8C8C8C; }
+
+    .workout-timer-large {
+      font-size: 6rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 16px;
+      transition: color 0.1s ease;
+    }
+    .workout-timer-large.countdown-red {
+      color: var(--rh-red);
+    }
+
+    .workout-title-lg {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .workout-subtitle-lg {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .progress-bar-container {
+      height: 8px;
+      width: 100%;
+      background: #1E1E1E;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--rh-green);
+      width: 100%;
+      transition: width 0.2s linear;
+    }
+
+    .workout-controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 12px;
+    }
+
+    .ctrl-btn {
+      background: #1A1A1A;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 16px 0;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+
+    .ctrl-btn:hover { background: #262626; }
+    .ctrl-btn:active { transform: scale(0.97); }
+
+    .ctrl-btn.primary {
+      background: var(--rh-green);
+      color: #000000;
+      border: none;
+    }
+
+    .ctrl-btn.primary.paused {
+      background: #FFB800;
+    }
+
+    .exercise-sequence-box {
+      background: #0A0A0A;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .sequence-header {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .sequence-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .seq-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .seq-item:last-child { border-bottom: none; }
+    .seq-item span:last-child { color: var(--text-muted); font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="#" class="brand" onclick="switchView('home-view'); return false;">
+      <div class="logo-container">
+        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M190 370V140" stroke="#CCFF00" stroke-width="28" stroke-linecap="round"/>
+          <path d="M214 370V140" stroke="#CCFF00" stroke-width="28" stroke-linecap="round"/>
+          <path d="M214 140C214 140 214 90 264 90H300C350 90 350 140 350 140C350 140 350 190 300 190H214" stroke="#CCFF00" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M214 260C214 260 214 210 264 210H285C310 210 325 225 325 250C325 275 305 290 280 290H214" stroke="#CCFF00" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="256" cy="250" r="24" fill="#CCFF00"/>
+          <path d="M280 230L335 140M335 140H290M335 140V185" stroke="#CCFF00" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="brand-title">Pulse</span>
+    </a>
+    <div class="nav-right">
+      <button class="rh-pill-btn" onclick="startWorkout(0)">Start Live Session</button>
+    </div>
+  </header>
+
+  <div class="view-container">
+    
+    <!-- HOME VIEW: Robinhood List Style -->
+    <div id="home-view" class="view active">
+      <div class="ticker-list-container">
+        <div class="section-header-title">Workout Portfolio (100+ Mixes)</div>
+        <div id="portfolio-list">
+          <!-- Dynamically populated rows -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVE WORKOUT STANDALONE TAB VIEW -->
+    <div id="workout-view" class="view">
+      <div class="active-workout-view">
+        
+        <div class="back-nav-bar">
+          <button class="back-btn" onclick="switchView('home-view')">← Back to Portfolio</button>
+          <span id="active-ticker-symbol" style="font-weight: 800; color: var(--rh-yellow); font-size: 0.9rem;">WORKOUT #1</span>
+        </div>
+
+        <div class="workout-main-card">
+          <div class="workout-badge badge-work" id="w-badge">WORK</div>
+          <div class="workout-timer-large" id="w-timer">30</div>
+          <div class="workout-title-lg" id="w-title">Exercise A (Set 1)</div>
+          <div class="workout-subtitle-lg" id="w-subtitle">Superset 1 of 9 • 4-min Block</div>
+
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="w-progress"></div>
+          </div>
+
+          <div class="workout-controls-grid">
+            <button class="ctrl-btn" onclick="resetWorkoutTimer()">Reset</button>
+            <button class="ctrl-btn primary" id="w-start-btn" onclick="toggleWorkoutTimer()">START</button>
+            <button class="ctrl-btn" onclick="skipWorkoutInterval()">Skip</button>
+          </div>
+        </div>
+
+        <div class="exercise-sequence-box">
+          <div class="sequence-header">Workout Blueprint (45 min total)</div>
+          <div class="sequence-items" id="sequence-list">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const equipmentPairs = [
+      { sym: "ROWR", name: "Concept2 Rower & DB Thrusters", category: "Hybrid Engine", pool: [
+        {a: "Concept2 Rower Sprints", b: "Dumbbell Thrusters"},
+        {a: "SkiErg Pulls", b: "Burpee Box Jumps"},
+        {a: "Assault Bike Calories", b: "Wall Ball Shots"},
+        {a: "Farmer's Carry", b: "Sled Push"},
+        {a: "Sandbag Cleans", b: "Overhead Lunges"}
+      ]},
+      { sym: "BIKE", name: "Assault AirBike & Push Press", category: "Cardio & Power", pool: [
+        {a: "Assault AirBike Sprints", b: "Barbell Push Press"},
+        {a: "Rowing Steady State", b: "Dumbbell Push Jerks"},
+        {a: "SkiErg Calorie Sprint", b: "Kettlebell Swings"},
+        {a: "Plate Pushes", b: "Med Ball Slams"},
+        {a: "Battle Ropes", b: "Jump Rope Double Unders"}
+      ]},
+      { sym: "SQUAT", name: "Barbell Squats & Box Jumps", category: "Lower Strength", pool: [
+        {a: "Barbell Back Squats", b: "Bodyweight Box Jumps"},
+        {a: "Front Squats", b: "Broad Jumps"},
+        {a: "Goblet Squats", b: "Bulgarian Split Squats"},
+        {a: "Leg Press", b: "Calf Raises"},
+        {a: "Trap Bar Deadlifts", b: "Box Step-ups"}
+      ]},
+      { sym: "CABLE", name: "Dual Cable Tower Stack", category: "Functional Core", pool: [
+        {a: "Cable Woodchoppers", b: "Cable Rope Face Pulls"},
+        {a: "Cable Chest Press", b: "Cable Lat Pulldowns"},
+        {a: "Cable Crossovers", b: "Cable Bicep Curls"},
+        {a: "Cable Tricep Pushdowns", b: "Cable Crunch"},
+        {a: "Single-Arm Cable Rows", b: "Cable Lateral Raises"}
+      ]},
+      { sym: "DBDL", name: "Dumbbell RDLs & Bent-Rows", category: "Posterior Chain", pool: [
+        {a: "Dumbbell Romanian Deadlifts", b: "Dumbbell Bent-Over Rows"},
+        {a: "Barbell Good Mornings", b: "Pendlay Rows"},
+        {a: "Single-Leg RDLs", b: "Chest-Supported Rows"},
+        {a: "DB Deadlifts", b: "Inverted Rows"},
+        {a: "Glute Bridges", b: "Seated Cable Rows"}
+      ]},
+      { sym: "HYBR", name: "Erg Intervals & Heavy Barbells", category: "Full Body Hybrid", pool: [
+        {a: "Concept2 Rower (Steady)", b: "Barbell Romanian Deadlifts"},
+        {a: "SkiErg Intervals", b: "Barbell Power Cleans"},
+        {a: "AirBike Sprints", b: "Deadlift & Shrug"},
+        {a: "Row & Ski Combo", b: "Thrusters"},
+        {a: "Assault Bike", b: "Push Ups"}
+      ]},
+      { sym: "SNAT", name: "AirBike & DB Snatches", category: "Explosive Power", pool: [
+        {a: "Assault AirBike Calories", b: "Dumbbell Alternating Snatches"},
+        {a: "Row Sprints", b: "Barbell Snatches"},
+        {a: "SkiErg Sprints", b: "Kettlebell Snatches"},
+        {a: "AirBike Active Recovery", b: "DB Clean & Jerk"},
+        {a: "Rowing Damper 10", b: "Power Snatches"}
+      ]},
+      { sym: "PULL", name: "Lat Pulldowns & Low Rows", category: "Upper Back Stack", pool: [
+        {a: "Cable Lat Pulldowns", b: "Cable Seated Low Rows"},
+        {a: "Pull-ups", b: "Barbell Rows"},
+        {a: "Chin-ups", b: "T-Bar Rows"},
+        {a: "Straight-Arm Pulldowns", b: "Dumbbell Shrugs"},
+        {a: "Neutral Grip Pulldowns", b: "Face Pulls"}
+      ]},
+      { sym: "BENCH", name: "Barbell & DB Bench Press", category: "Chest & Triceps", pool: [
+        {a: "Barbell Bench Press", b: "Dumbbell Floor Press"},
+        {a: "Incline DB Press", b: "Tricep Dips"},
+        {a: "Decline Bench Press", b: "Close-Grip Bench"},
+        {a: "Push-ups", b: "Diamond Push-ups"},
+        {a: "Chest Flyes", b: "Overhead Tricep Extension"}
+      ]},
+      { sym: "CARD", name: "Dual Cardio Machine Sprints", category: "Aerobic Engine", pool: [
+        {a: "Concept2 Rower (Sprint)", b: "Assault AirBike (Recovery)"},
+        {a: "SkiErg Sprint", b: "Concept2 Rower (Steady)"},
+        {a: "AirBike Sprint", b: "SkiErg Recovery"},
+        {a: "Treadmill Sprints", b: "AirBike Recovery"},
+        {a: "Rowing Intervals", b: "SkiErg Intervals"}
+      ]}
+    ];
+
+    // Generate 100 portfolio items
+    let portfolioWorkouts = [];
+    for (let i = 1; i <= 100; i++) {
+      const template = equipmentPairs[(i - 1) % equipmentPairs.length];
+      portfolioWorkouts.push({
+        id: i,
+        symbol: `${template.sym}${i}`,
+        name: `Workout #${i}: ${template.name}`,
+        category: template.category,
+        pool: template.pool
+      });
+    }
+
+    let currentWorkoutIndex = 0;
+    let workoutQueue = [];
+    let queueIdx = 0;
+    let timeRemaining = 30;
+    let workoutTimerId = null;
+    let isWorkoutRunning = false;
+    let targetEndTime = null;
+    let audioCtx = null;
+    let lastBeepedSecond = null;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    // Standard CrossFit-style gym clock beep generator (high pitched square wave beep)
+    function playClockBeep(isFinal = false) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        // 880 Hz for countdown beeps (5, 4, 3, 2), 1760 Hz high pitch for GO / interval change
+        osc.frequency.value = isFinal ? 1760 : 880;
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        const duration = isFinal ? 0.35 : 0.1;
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function renderPortfolioList() {
+      const container = document.getElementById('portfolio-list');
+      container.innerHTML = '';
+      portfolioWorkouts.forEach((w, idx) => {
+        const row = document.createElement('div');
+        row.className = 'ticker-row';
+        row.innerHTML = `
+          <div class="ticker-info">
+            <h3>${w.symbol} — ${w.name}</h3>
+            <span>${w.category} • 45m Session</span>
+          </div>
+          <div class="ticker-action-badge">Train</div>
+        `;
+        row.onclick = () => startWorkout(idx);
+        container.appendChild(row);
+      });
+    }
+
+    function switchView(viewId) {
+      if (viewId === 'home-view') {
+        if (workoutTimerId) clearInterval(workoutTimerId);
+        isWorkoutRunning = false;
+      }
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    function buildQueue(workoutObj) {
+      const q = [];
+      const supersetCount = 9;
+      for (let s = 0; s < supersetCount; s++) {
+        const pair = workoutObj.pool[s % workoutObj.pool.length];
+        
+        for (let setNum = 1; setNum <= 2; setNum++) {
+          q.push({
+            type: 'WORK',
+            duration: 30,
+            title: `${pair.a} (Set ${setNum})`,
+            next: `Rest / Switch → ${pair.b}`,
+            supersetNum: s + 1
+          });
+          q.push({
+            type: 'TRANSITION',
+            duration: 30,
+            title: `Rest / Prep`,
+            next: `Next: ${pair.b} (Set ${setNum})`,
+            supersetNum: s + 1
+          });
+
+          q.push({
+            type: 'WORK',
+            duration: 30,
+            title: `${pair.b} (Set ${setNum})`,
+            next: setNum < 2 ? `Rest / Switch → ${pair.a}` : (s < supersetCount - 1 ? `Station Setup (1 min)` : `Workout Complete`),
+            supersetNum: s + 1
+          });
+          q.push({
+            type: 'TRANSITION',
+            duration: 30,
+            title: `Rest / Prep`,
+            next: setNum < 2 ? `Next: ${pair.a} (Set 2)` : (s < supersetCount - 1 ? `Station Setup (1 min)` : `Finish`),
+            supersetNum: s + 1
+          });
+        }
+
+        if (s < supersetCount - 1) {
+          const nextPair = workoutObj.pool[(s + 1) % workoutObj.pool.length];
+          q.push({
+            type: 'SETUP',
+            duration: 60,
+            title: `Equipment Setup & Move`,
+            next: `Next Superset: ${nextPair.a} & ${nextPair.b}`,
+            supersetNum: s + 1
+          });
+        }
+      }
+      return q;
+    }
+
+    function startWorkout(index) {
+      currentWorkoutIndex = index;
+      const w = portfolioWorkouts[index];
+      workoutQueue = buildQueue(w);
+      queueIdx = 0;
+      timeRemaining = workoutQueue[0].duration;
+      lastBeepedSecond = null;
+
+      document.getElementById('active-ticker-symbol').innerText = `${w.symbol} — ${w.name}`;
+      
+      if (workoutTimerId) clearInterval(workoutTimerId);
+      isWorkoutRunning = false;
+      const btn = document.getElementById('w-start-btn');
+      btn.innerText = 'START';
+      btn.classList.remove('paused');
+
+      updateWorkoutDisplay();
+      renderSequenceList();
+      switchView('workout-view');
+    }
+
+    function renderSequenceList() {
+      const container = document.getElementById('sequence-list');
+      container.innerHTML = '';
+      const w = portfolioWorkouts[currentWorkoutIndex];
+      
+      const items = [
+        { label: "Structure", val: "9 Supersets (4 min work + 1 min setup)" },
+        { label: "Superset Format", val: "4 Sets total per pair (30s work / 30s rest)" },
+        { label: "Total Duration", val: "45 Minutes" },
+        { label: "Category", val: w.category }
+      ];
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'seq-item';
+        div.innerHTML = `<span>${item.label}</span><span>${item.val}</span>`;
+        container.appendChild(div);
+      });
+    }
+
+    function updateWorkoutDisplay() {
+      const timerEl = document.getElementById('w-timer');
+      if (queueIdx >= workoutQueue.length) {
+        document.getElementById('w-badge').innerText = 'COMPLETED';
+        document.getElementById('w-badge').className = 'workout-badge badge-work';
+        timerEl.innerText = '00';
+        timerEl.classList.remove('countdown-red');
+        document.getElementById('w-title').innerText = 'Workout Settled!';
+        document.getElementById('w-subtitle').innerText = '45-minute session successfully executed.';
+        document.getElementById('w-progress').style.width = '0%';
+        return;
+      }
+
+      const item = workoutQueue[queueIdx];
+      const badge = document.getElementById('w-badge');
+      if (item.type === 'WORK') {
+        badge.innerText = `Superset ${item.supersetNum} • WORK`;
+        badge.className = 'workout-badge badge-work';
+      } else if (item.type === 'TRANSITION') {
+        badge.innerText = `Superset ${item.supersetNum} • REST`;
+        badge.className = 'workout-badge badge-trans';
+      } else {
+        badge.innerText = `STATION CHANGE`;
+        badge.className = 'workout-badge badge-setup';
+      }
+
+      timerEl.innerText = String(Math.max(0, timeRemaining)).padStart(2, '0');
+      
+      // Highlight last 5 seconds in bright CrossFit red font
+      if (timeRemaining <= 5 && timeRemaining > 0) {
+        timerEl.classList.add('countdown-red');
+      } else {
+        timerEl.classList.remove('countdown-red');
+      }
+
+      document.getElementById('w-title').innerText = item.title;
+      document.getElementById('w-subtitle').innerText = item.next;
+
+      const pct = (timeRemaining / item.duration) * 100;
+      document.getElementById('w-progress').style.width = pct + '%';
+    }
+
+    function workoutTick() {
+      const now = Date.now();
+      timeRemaining = Math.round((targetEndTime - now) / 1000);
+
+      // Trigger CrossFit style beeps on exact second changes for the final 5 seconds (5, 4, 3, 2, 1)
+      if (timeRemaining <= 5 && timeRemaining >= 1 && timeRemaining !== lastBeepedSecond) {
+        playClockBeep(false);
+        lastBeepedSecond = timeRemaining;
+      }
+
+      if (timeRemaining <= 0) {
+        // High pitched GO / interval transition beep
+        playClockBeep(true);
+        queueIdx++;
+        lastBeepedSecond = null;
+        if (queueIdx < workoutQueue.length) {
+          timeRemaining = workoutQueue[queueIdx].duration;
+          targetEndTime = Date.now() + (timeRemaining * 1000);
+        } else {
+          clearInterval(workoutTimerId);
+          isWorkoutRunning = false;
+          document.getElementById('w-start-btn').innerText = 'START';
+          document.getElementById('w-start-btn').classList.remove('paused');
+        }
+      }
+      updateWorkoutDisplay();
+    }
+
+    function toggleWorkoutTimer() {
+      initAudio();
+      const btn = document.getElementById('w-start-btn');
+
+      if (!isWorkoutRunning) {
+        if (queueIdx >= workoutQueue.length) startWorkout(currentWorkoutIndex);
+        isWorkoutRunning = true;
+        btn.innerText = 'PAUSE';
+        btn.classList.add('paused');
+        targetEndTime = Date.now() + (timeRemaining * 1000);
+        workoutTimerId = setInterval(workoutTick, 100);
+      } else {
+        isWorkoutRunning = false;
+        btn.innerText = 'RESUME';
+        btn.classList.remove('paused');
+        clearInterval(workoutTimerId);
+      }
+    }
+
+    function resetWorkoutTimer() {
+      if (workoutTimerId) clearInterval(workoutTimerId);
+      isWorkoutRunning = false;
+      startWorkout(currentWorkoutIndex);
+    }
+
+    function skipWorkoutInterval() {
+      if (queueIdx < workoutQueue.length - 1) {
+        queueIdx++;
+        timeRemaining = workoutQueue[queueIdx].duration;
+        targetEndTime = Date.now() + (timeRemaining * 1000);
+        lastBeepedSecond = null;
+        updateWorkoutDisplay();
+      }
+    }
+
+    renderPortfolioList();
+  </script>
+</body>
+</html>
