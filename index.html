@@ -35,6 +35,8 @@
   --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* Class selectors like .pill set display and outrank the UA [hidden] rule. */
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{
   background:var(--bg);color:var(--text);
@@ -51,7 +53,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 
 /* ---------- shell ---------- */
-.app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+/* Fixed-height shell: scrolling happens inside a view, never on <body>, so the
+   session timer can stay pinned while the plan scrolls under it. */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .topbar{
   position:sticky;top:0;z-index:50;
   padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;
@@ -63,9 +67,15 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .brand{display:flex;align-items:center;gap:9px}
 .brand svg{width:26px;height:26px;color:var(--brand);display:block}
 .brand-name{font-size:1.22rem;font-weight:800;letter-spacing:-.035em}
-.main{flex:1;display:flex;flex-direction:column;padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 20px)}
-.view{display:none;flex:1;flex-direction:column;animation:fade .22s var(--ease)}
+.main{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.view{display:none;flex:1;min-height:0;flex-direction:column;animation:fade .22s var(--ease)}
 .view.active{display:flex}
+/* Portfolio and Settings scroll as a whole; the session view manages its own. */
+.scroller{
+  flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 20px);
+}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .wrap{width:100%;max-width:600px;margin:0 auto;padding:0 16px}
 
@@ -145,8 +155,65 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .empty{text-align:center;color:var(--muted);padding:48px 20px;font-size:.9rem}
 
 /* ---------- session ---------- */
-/* padding-* only: a `padding` shorthand here would clobber .wrap's gutters */
-.sess{display:flex;flex-direction:column;gap:14px;padding-top:16px;padding-bottom:28px}
+/* ---------- session: pinned head, scrolling plan ---------- */
+.sess-pinned{flex:0 0 auto;padding:14px 0 10px;background:var(--bg);position:relative;z-index:5}
+.sess-pinned .wrap{display:flex;flex-direction:column;gap:12px}
+.agenda-wrap{flex:1;min-height:0;position:relative}
+.agenda{
+  height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;scroll-behavior:smooth;
+  scroll-snap-type:y proximity;
+  padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 24px);
+  /* fade the plan out as it passes under the pinned timer */
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image:linear-gradient(to bottom, transparent 0, #000 18px);
+}
+.agenda .wrap{display:flex;flex-direction:column;gap:14px;padding-top:10px}
+
+/* ---------- the full session plan ---------- */
+.plan{list-style:none;display:flex;flex-direction:column;gap:5px}
+.qhead{
+  position:sticky;top:0;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);padding:9px 2px 7px;margin-top:6px;
+  font-size:.7rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+}
+.qhead span:last-child{color:var(--muted-2);letter-spacing:.04em}
+.prow{
+  display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;
+  background:var(--surface);border:1px solid transparent;
+  scroll-snap-align:center;transition:background .25s var(--ease),border-color .25s var(--ease),opacity .25s;
+}
+.prow .pdot{width:8px;height:8px;border-radius:50%;background:var(--muted-2);flex:0 0 auto;transition:all .25s}
+.prow.work .pdot{background:var(--brand)}
+.prow.rest .pdot{background:var(--warn)}
+.prow.cardio .pdot{background:var(--cardio)}
+.ptxt{flex:1;min-width:0}
+.ptxt b{display:block;font-size:.9rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptxt small{display:block;font-size:.73rem;color:var(--muted);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdur{font-size:.78rem;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums}
+.prow.done{opacity:.32}
+.prow.done .ptxt b{text-decoration:line-through;text-decoration-color:var(--muted-2)}
+.prow.now{
+  background:var(--brand-dim);border-color:rgba(72,253,0,.32);
+  box-shadow:0 0 0 1px rgba(72,253,0,.12), 0 8px 24px rgba(0,0,0,.5);
+}
+.prow.now .ptxt b{color:var(--brand)}
+.prow.now.rest{background:rgba(255,184,0,.12);border-color:rgba(255,184,0,.32)}
+.prow.now.rest .ptxt b{color:var(--warn)}
+.prow.now.cardio{background:var(--cardio-dim);border-color:rgba(63,216,255,.32)}
+.prow.now.cardio .ptxt b{color:var(--cardio)}
+.prow.now .pdot{box-shadow:0 0 9px currentColor}
+
+.jump-now{
+  position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;
+  background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);
+  border-radius:100px;padding:8px 16px;font-size:.78rem;font-weight:700;
+  box-shadow:0 8px 24px rgba(0,0,0,.6);animation:fade .2s var(--ease);
+}
+.jump-now[hidden]{display:none}
+.jump-now:active{transform:translateX(-50%) scale(.95)}
 .sess-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .icon-btn{
   display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);
@@ -164,8 +231,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .schip.on .dot{background:var(--brand);box-shadow:0 0 7px var(--brand)}
 .schip.warn{color:var(--warn);border-color:rgba(255,184,0,.3);background:rgba(255,184,0,.1)}
 .schip.warn .dot{background:var(--warn)}
+.tapchip{cursor:pointer;transition:transform .12s var(--ease)}
+.tapchip:active{transform:scale(.94)}
 
-.timer-card{padding:24px 20px 22px;text-align:center;position:relative;overflow:hidden}
+.timer-card{padding:18px 18px 16px;text-align:center;position:relative;overflow:hidden}
 .badge{
   display:inline-block;font-size:.68rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase;
   padding:6px 13px;border-radius:8px;margin-bottom:14px;
@@ -176,18 +245,20 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .badge.cardio{background:var(--cardio-dim);color:var(--cardio)}
 .badge.done{background:var(--brand);color:#000}
 .timer{
-  font-size:clamp(4.6rem,26vw,6.6rem);font-weight:850;letter-spacing:-.055em;line-height:.94;
+  font-size:clamp(3.9rem,21vw,5.4rem);font-weight:850;letter-spacing:-.055em;line-height:.94;
   margin-bottom:10px;transition:color .12s;
 }
 .timer.urgent{color:var(--down)}
 .timer.cardio{color:var(--cardio)}
-.timer.long{font-size:clamp(3.4rem,18vw,4.8rem)}   /* m:ss needs more room than "45" */
+.timer.long{font-size:clamp(3rem,15vw,4rem)}   /* m:ss needs more room than "45" */
 /* Reserve two lines so the card doesn't jump as titles change length. */
-.sess-title{font-size:1.18rem;font-weight:800;letter-spacing:-.025em;margin-bottom:5px;
-  min-height:2.9em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
+.sess-title{font-size:1.1rem;font-weight:800;letter-spacing:-.025em;margin-bottom:5px;
+  min-height:2.4em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
+.sess-title.swap{animation:titleIn .32s var(--ease)}
+@keyframes titleIn{from{opacity:0;transform:translateY(5px)}}
 .sess-next{font-size:.87rem;color:var(--muted);margin-bottom:20px}
 .sess-next:empty{margin-bottom:6px}
-.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden;margin-bottom:20px}
+.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden;margin-bottom:15px}
 .bar-fill{height:100%;background:var(--brand);border-radius:100px;transform-origin:left;will-change:transform}
 .bar-fill.rest{background:var(--warn)}
 .bar-fill.switch{background:var(--muted)}
@@ -195,14 +266,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .controls{display:grid;grid-template-columns:1fr 1.7fr 1fr;gap:10px}
 .ctrl{
   background:var(--surface-2);border:1px solid var(--border);border-radius:15px;
-  padding:15px 0;font-weight:750;font-size:.92rem;transition:transform .12s var(--ease),background .15s;
+  padding:13px 0;font-weight:750;font-size:.92rem;transition:transform .12s var(--ease),background .15s;
 }
 .ctrl:active{transform:scale(.96)}
 .ctrl.primary{background:var(--brand);color:#000;border-color:var(--brand);font-size:1rem;letter-spacing:.01em}
 .ctrl.primary.running{background:var(--warn);border-color:var(--warn)}
 
 /* ---------- quarter indicator ---------- */
-.quarters{margin-bottom:16px}
+.quarters{margin-bottom:12px}
 .qsegs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .qseg{height:4px;border-radius:100px;background:var(--surface-3);overflow:hidden;position:relative}
 .qseg i{position:absolute;inset:0;transform-origin:left;background:var(--brand);
@@ -212,9 +283,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
   color:var(--muted);margin-top:9px}
 
 /* ---------- superset pair ---------- */
-.pair{display:flex;flex-direction:column;gap:7px;margin-bottom:20px;text-align:left}
+.pair{display:flex;flex-direction:column;gap:6px;margin-bottom:15px;text-align:left}
 .pair-row{
-  display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:15px;
+  display:flex;align-items:center;gap:11px;padding:9px 13px;border-radius:15px;
   background:var(--surface-2);border:1px solid transparent;
   transition:background .3s var(--ease),border-color .3s var(--ease),opacity .3s;
   opacity:.5;
@@ -232,38 +303,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
   font-size:.86rem;color:var(--muted);line-height:1.5}
 .pair-solo b{display:block;color:var(--text);font-size:.95rem;font-weight:700;margin-bottom:2px}
 
-/* ---------- up-next rail ---------- */
-.rail-card{padding:17px 18px 8px}
-.rail-head{font-size:.8rem;font-weight:750;color:var(--muted);margin-bottom:14px;letter-spacing:.01em}
-.rail{list-style:none;position:relative;padding-left:26px}
-/* the connecting thread */
-.rail::before{content:"";position:absolute;left:7px;top:9px;bottom:22px;width:2px;
-  background:linear-gradient(var(--surface-3),transparent);border-radius:2px}
-.rail li{position:relative;padding:0 0 17px;display:flex;align-items:flex-start;gap:11px;
-  animation:railIn .45s var(--ease) both}
-.rail li::before{content:"";position:absolute;left:-23px;top:5px;width:9px;height:9px;border-radius:50%;
-  background:var(--surface-3);border:2px solid var(--bg);box-sizing:content-box}
-.rail li.now::before{background:var(--brand);box-shadow:0 0 10px var(--brand)}
-.rail li.cardio::before{background:var(--cardio)}
-.rail li.rest::before{background:var(--warn)}
-.rail-txt{flex:1;min-width:0}
-.rail-txt b{display:block;font-size:.9rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail-txt small{display:block;font-size:.75rem;color:var(--muted);margin-top:1px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail li.now .rail-txt b{color:var(--brand)}
-.rail-dur{font-size:.78rem;font-weight:700;color:var(--muted);flex:0 0 auto;padding-top:1px}
-.rail li:nth-child(2){opacity:.86}
-.rail li:nth-child(3){opacity:.68}
-.rail li:nth-child(4){opacity:.5}
-.rail li:nth-child(5){opacity:.34}
-.rail li:nth-child(6){opacity:.2}
-.rail li:nth-child(2){animation-delay:.04s}
-.rail li:nth-child(3){animation-delay:.08s}
-.rail li:nth-child(4){animation-delay:.12s}
-.rail li:nth-child(5){animation-delay:.16s}
-.rail li:nth-child(6){animation-delay:.2s}
-@keyframes railIn{from{opacity:0;transform:translateY(7px)}}
-.rail-done{color:var(--muted);font-size:.85rem;padding-bottom:16px}
+/* (the six-item rail was replaced by the full scrollable plan above) */
 
 .chart-card{padding:16px 16px 12px}
 .chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -343,7 +383,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
   <main class="main">
     <!-- ================= PORTFOLIO ================= -->
     <section id="view-portfolio" class="view active">
-      <div class="wrap">
+      <div class="scroller"><div class="wrap">
         <div class="hero">
           <div class="hero-label">Total training time</div>
           <div class="hero-value tnum" id="stat-total">0m</div>
@@ -364,19 +404,20 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
         </div>
         <div class="chips" id="chips"></div>
         <div class="list" id="list"></div>
-      </div>
+      </div></div>
     </section>
 
     <!-- ================= SESSION ================= -->
     <section id="view-session" class="view">
-      <div class="wrap sess">
+      <!-- Pinned: never scrolls. -->
+      <div class="sess-pinned"><div class="wrap">
         <div class="sess-top">
           <button class="icon-btn" id="btn-back">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
             Portfolio
           </button>
           <div class="status-chips">
-            <div class="schip" id="chip-audio"><i class="dot"></i><span>Audio</span></div>
+            <button class="schip tapchip" id="chip-audio" title="Tap to test sound"><i class="dot"></i><span>Audio</span></button>
             <div class="schip" id="chip-wake"><i class="dot"></i><span>Screen</span></div>
           </div>
         </div>
@@ -399,10 +440,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
           </div>
         </div>
 
-        <div class="card rail-card">
-          <div class="rail-head">Coming up</div>
-          <ol class="rail" id="s-rail"></ol>
-        </div>
+      </div></div>
+
+      <!-- Scrolls under the pinned timer: the whole session, top to bottom. -->
+      <div class="agenda-wrap">
+        <button class="jump-now" id="btn-jump" hidden>Jump to now</button>
+        <div class="agenda" id="agenda"><div class="wrap">
+          <ol class="plan" id="s-plan"></ol>
 
         <div class="card chart-card">
           <div class="chart-head">
@@ -419,12 +463,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
         </div>
 
         <div class="card blueprint" id="blueprint"></div>
+        </div></div>
       </div>
     </section>
 
     <!-- ================= SETTINGS ================= -->
     <section id="view-settings" class="view">
-      <div class="wrap">
+      <div class="scroller"><div class="wrap">
         <div class="set-group">
           <div class="eyebrow">Interval timing</div>
           <div class="card set-card" id="timing-card"></div>
@@ -442,6 +487,16 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
               <div class="seg" id="seg-sound">
                 <button data-v="transient">Duck</button>
                 <button data-v="ambient">Mix</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <div>
+                <div class="lbl">Sound engine</div>
+                <div class="hint" id="engine-hint"></div>
+              </div>
+              <div class="seg" id="seg-engine">
+                <button data-v="element">Standard</button>
+                <button data-v="webaudio">Precise</button>
               </div>
             </div>
             <div class="set-row">
@@ -498,9 +553,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
               <button class="pill ghost" id="btn-wipe">Reset</button>
             </div>
           </div>
-          <div class="note">Pulse v2 · everything is stored on this device only.</div>
+          <div class="note">Pulse · everything is stored on this device only.</div>
         </div>
-      </div>
+      </div></div>
     </section>
   </main>
 
@@ -623,7 +678,8 @@ const DEFAULTS = {
   switchSec:30,         // station change — this IS the rest, never stacked with one
   cardioMin:1, cardioMax:5,
   soundMode:"ambient",          // never duck the user's music
-  settingsVersion:2,
+  engine:"element",             // media elements: iOS exempts them from the silent switch
+  settingsVersion:3,
   volume:0.8, wake:true
 };
 
@@ -646,9 +702,11 @@ function migrateSettings(){
   // migrated even when the stored settings predate this change.
   let stored = null;
   try { stored = JSON.parse(localStorage.getItem(KEY.settings) || "null"); } catch(_){}
-  if(stored && (stored.settingsVersion || 0) < 2){
-    S.soundMode = "ambient";
-    S.settingsVersion = 2;
+  const v = stored ? (stored.settingsVersion || 0) : Infinity;   // fresh install needs nothing
+  if(v < 2) S.soundMode = "ambient";       // stop ducking the user's music
+  if(v < 3) S.engine = "element";          // Web Audio could stall silently on iOS
+  if(v < 3){
+    S.settingsVersion = 3;
     save(KEY.settings, S);
   }
 }
@@ -708,6 +766,7 @@ function toast(msg){
 const Sound = {
   ctx:null, master:null, ready:false, engine:"none",
   wav:{}, pool:[], poolIdx:0, hasSessionApi:("audioSession" in navigator),
+  unlocked:false, lastError:null, cuesPlayed:0, warned:false,
 
   applySessionType(){
     if(!this.hasSessionApi) return "unsupported";
@@ -730,21 +789,74 @@ const Sound = {
         const src = this.ctx.createBufferSource();
         src.buffer = buf; src.connect(this.ctx.destination); src.start(0);
         this.ctx.resume();
-        this.ctx.onstatechange = () => { updateStatusChips(); renderDiag(); };
+        // Must actually try to recover here. iOS suspends the context on any
+        // interruption, and the resume() inside cue() runs from a timer rather
+        // than a gesture, which iOS refuses — so without this the context stays
+        // suspended and every remaining cue is silent.
+        this.ctx.onstatechange = () => { this.recover(); updateStatusChips(); renderDiag(); };
       }catch(_){ this.ctx = null; }
     }
     this.buildElements();
-    // Without audioSession we cannot lift Web Audio above the silent switch,
-    // but media elements are exempt — so prefer them on older iOS.
-    this.engine = (!this.hasSessionApi && this.pool.length) ? "element"
-                : this.ctx ? "webaudio"
-                : this.pool.length ? "element" : "none";
+    this.unlockElements();
+    this.engine = (S.engine === "webaudio" && this.ctx) ? "webaudio"
+                : this.pool.length ? "element"
+                : this.ctx ? "webaudio" : "none";
     this.ready = true;
     updateStatusChips(); renderDiag();
   },
 
+  /** iOS only honours play() on an element that a gesture has already started.
+   *  init() runs inside the first tap, so prime every element here or the
+   *  whole element engine is silent. */
+  unlockElements(){
+    if(!this.pool.length) return;
+    let ok = 0;
+    for(const a of this.pool){
+      try{
+        a.src = this.wav.count;
+        a.load();
+        a.muted = true;
+        const p = a.play();
+        const settle = () => { try{ a.pause(); a.currentTime = 0; a.muted = false; }catch(_){} };
+        if(p && p.then) p.then(() => { ok++; settle(); }).catch(err => { this.lastError = "unlock: " + err.name; settle(); });
+        else { ok++; settle(); }
+      }catch(err){ this.lastError = "unlock: " + err.message; }
+    }
+    this.unlocked = true;
+  },
+
   resume(){
     if(this.ctx && this.ctx.state === "suspended") this.ctx.resume().catch(()=>{});
+  },
+
+  /** Try to get output back; if iOS won't allow it here, wait for the next tap. */
+  recover(){
+    if(!this.ctx || this.ctx.state === "running") return;
+    this.ctx.resume().catch(()=>{});
+    if(this.ctx.state !== "running") this.armGestureResume();
+  },
+
+  armGestureResume(){
+    if(this._armed) return;
+    this._armed = true;
+    const once = () => {
+      this._armed = false;
+      if(this.ctx) this.ctx.resume().catch(()=>{});
+      this.applySessionType();
+      ["touchend","click"].forEach(e => window.removeEventListener(e, once));
+      updateStatusChips(); renderDiag();
+    };
+    ["touchend","click"].forEach(e => window.addEventListener(e, once, { once:true, passive:true }));
+  },
+
+  /** Silent failure is what made this impossible to diagnose. Say something. */
+  fail(msg){
+    this.lastError = msg;
+    updateStatusChips(); renderDiag();
+    if(!this.warned){
+      this.warned = true;
+      toast("Sound problem — see Settings › Audio check");
+    }
   },
 
   /* --- WAV synthesis for the element fallback ------------------------- */
@@ -796,6 +908,7 @@ const Sound = {
       for(let i=0;i<4;i++){
         const a = new Audio();
         a.preload = "auto"; a.playsInline = true;
+        a.setAttribute("playsinline", "");
         this.pool.push(a);
       }
     }catch(_){ this.pool = []; }
@@ -810,8 +923,12 @@ const Sound = {
       a.volume = clamp(S.volume, 0, 1);
       a.currentTime = 0;
       const p = a.play();
-      if(p && p.catch) p.catch(()=>{});
-    }catch(_){}
+      if(p && p.then){
+        p.then(() => { this.cuesPlayed++; if(this.lastError) { this.lastError = null; updateStatusChips(); } })
+         .catch(err => this.fail("play() rejected: " + err.name));
+      } else this.cuesPlayed++;
+      if(a.error) this.fail("media error " + a.error.code);
+    }catch(err){ this.fail("play threw: " + err.message); }
   },
 
   tone(when, f, dur, gain){
@@ -831,11 +948,16 @@ const Sound = {
     delayMs = Math.max(0, delayMs || 0);
     if(this.engine === "webaudio" && this.ctx){
       this.resume();
+      // A suspended context silently swallows everything scheduled on it.
+      if(this.ctx.state !== "running"){ this.recover(); this.fail("context " + this.ctx.state); }
       const when = this.ctx.currentTime + delayMs / 1000;
       for(const seg of this.cueSpec(kind).segs) this.tone(when + seg.at, seg.f, seg.dur, seg.gain);
+      this.cuesPlayed++;
     } else if(this.engine === "element"){
       if(delayMs < 20) this.playElement(kind);
       else setTimeout(() => this.playElement(kind), delayMs);
+    } else {
+      this.fail("no audio engine");
     }
   },
 
@@ -1286,7 +1408,13 @@ function renderStatic(){
   const badge = $("s-badge");
   badge.className = "badge " + cls;
   badge.textContent = item.type === "WORK" ? item.detail : label;
-  $("s-title").textContent = item.title;
+  const titleEl = $("s-title");
+  if(titleEl.textContent !== item.title){          // crossfade only on a real change
+    titleEl.textContent = item.title;
+    titleEl.classList.remove("swap");
+    void titleEl.offsetWidth;                      // restart the animation
+    titleEl.classList.add("swap");
+  }
   // The rail below already says what's next, so this line is reserved for
   // things it can't carry: a cardio coaching cue, or the closing summary.
   $("s-next").textContent = item.type === "CARDIO" ? item.detail : "";
@@ -1294,7 +1422,7 @@ function renderStatic(){
   $("s-timer").classList.toggle("cardio", item.type === "CARDIO");
   renderQuarters();
   renderPair();
-  renderRail();
+  markPlan();
 }
 
 /** Four segments, one per quarter, filling as you go. */
@@ -1328,19 +1456,61 @@ function renderPair(){
   box.innerHTML = rows.join("");
 }
 
-/** The upcoming-intervals rail: current item plus the next five. */
-function renderRail(){
-  const t = Timer, rail = $("s-rail");
-  if(t.finished){ rail.innerHTML = `<div class="rail-done">Nothing left — you're done.</div>`; return; }
-  const slice = t.queue.slice(t.idx, t.idx + 6);
-  rail.innerHTML = slice.map((it, i) => {
-    const cls = i === 0 ? "now" : it.type === "CARDIO" ? "cardio" : REST_LIKE.has(it.type) ? "rest" : "";
-    return `<li class="${cls}">
-              <div class="rail-txt"><b>${esc(it.title)}</b><small>${esc(it.detail || "")}</small></div>
-              <span class="rail-dur tnum">${mmss(it.duration)}</span>
-            </li>`;
-  }).join("");
+/* The whole session, scrollable under the pinned timer. Rebuilt only when the
+   queue changes; interval changes just move the `now` class. */
+const KIND = it => it.type === "CARDIO" ? "cardio" : REST_LIKE.has(it.type) ? "rest" : "work";
+
+function buildPlan(){
+  const t = Timer, plan = $("s-plan");
+  if(!t.queue.length){ plan.innerHTML = ""; return; }
+  let html = "", quarter = 0;
+  t.queue.forEach((it, i) => {
+    if(it.quarter !== quarter && it.type !== "CARDIO"){
+      quarter = it.quarter;
+      const secs = t.queue.filter(x => x.quarter === quarter && x.type !== "CARDIO")
+                          .reduce((a,b) => a + b.duration, 0);
+      html += `<li class="qhead"><span>Quarter ${quarter}</span><span>${mmss(secs)}</span></li>`;
+    }
+    html += `<li class="prow ${KIND(it)}" data-i="${i}">
+               <span class="pdot"></span>
+               <div class="ptxt"><b>${esc(it.title)}</b><small>${esc(it.detail || "")}</small></div>
+               <span class="pdur">${mmss(it.duration)}</span>
+             </li>`;
+  });
+  plan.innerHTML = html;
+  Plan.rows = [...plan.querySelectorAll(".prow")];
+  Plan.follow = true;
+  markPlan(true);
 }
+
+/** Move the highlight; optionally scroll the current row into view. */
+function markPlan(jump){
+  const t = Timer;
+  if(!Plan.rows.length) return;
+  Plan.rows.forEach(el => {
+    const i = +el.dataset.i;
+    el.classList.toggle("now", !t.finished && i === t.idx);
+    el.classList.toggle("done", i < t.idx || t.finished);
+  });
+  if((jump || Plan.follow) && !t.finished) scrollToCurrent();
+}
+
+function scrollToCurrent(){
+  const row = Plan.rows[Timer.idx];
+  if(!row) return;
+  // Guard our own smooth scroll so it isn't mistaken for the user scrolling.
+  // Released on scroll-end rather than a fixed delay: a long glide across the
+  // plan easily outlives any timeout, and expiring mid-animation would cancel
+  // follow mode and pop the "Jump to now" pill back up.
+  Plan.auto = true;
+  clearTimeout(Plan.autoT);
+  Plan.autoT = setTimeout(() => { Plan.auto = false; }, 200);   // in case it doesn't move
+  row.scrollIntoView({ block:"center", behavior:"smooth" });
+  Plan.follow = true;
+  $("btn-jump").hidden = true;
+}
+
+const Plan = { rows:[], follow:true, auto:false, autoT:null, idleT:null };
 
 function renderTick(){
   const t = Timer;
@@ -1378,7 +1548,7 @@ function renderSession(full){
   $("chart-name").textContent = `${t.workout.symbol} · ${t.workout.name}`;
   // Must precede the state branches: drawChart() resets the playhead to 0,
   // and the branches below are what put it back in the right place.
-  if(full){ drawChart(); renderBlueprint(); }
+  if(full){ drawChart(); renderBlueprint(); buildPlan(); }
 
   if(t.finished){
     const badge = $("s-badge");
@@ -1390,7 +1560,7 @@ function renderSession(full){
     $("s-bar").style.transform = "scaleX(0)";
     $("s-pair").innerHTML = "";
     renderQuarters();
-    renderRail();
+    markPlan();
     $("chart-time").textContent = `${mmss(queueSeconds(t.queue))} / ${mmss(queueSeconds(t.queue))}`;
     updatePlayhead(1);
   } else {
@@ -1532,6 +1702,11 @@ function renderTimingNote(){
 }
 
 function renderSoundSeg(){
+  document.querySelectorAll("#seg-engine button").forEach(b =>
+    b.classList.toggle("active", b.dataset.v === S.engine));
+  $("engine-hint").textContent = S.engine === "element"
+    ? "Plays cues through a media element — iOS lets these through the silent switch and they can't be stalled by an interrupted audio context."
+    : "Sample-accurate Web Audio scheduling. Slightly tighter timing, but iOS can suspend it and silence every cue.";
   document.querySelectorAll("#seg-sound button").forEach(b =>
     b.classList.toggle("active", b.dataset.v === S.soundMode));
   $("sound-hint").textContent = S.soundMode === "ambient"
@@ -1547,6 +1722,9 @@ function renderDiag(){
   parts.push(`music        ${S.soundMode === "ambient" ? "<b>never ducked</b>" : "<em>ducks per cue</em>"}`);
   parts.push(`silent switch ${S.soundMode === "ambient" && Sound.engine === "webaudio"
     ? "<em>must be OFF or cues are muted</em>" : "<b>cues play regardless</b>"}`);
+  parts.push(`elements     ${Sound.pool.length ? (Sound.unlocked ? "<b>" + Sound.pool.length + " unlocked</b>" : "<em>not unlocked</em>") : "<em>none</em>"}`);
+  parts.push(`cues played  ${Sound.cuesPlayed ? "<b>" + Sound.cuesPlayed + "</b>" : "0 — tap Test"}`);
+  parts.push(`last error   ${Sound.lastError ? "<em>" + esc(Sound.lastError) + "</em>" : "<b>none</b>"}`);
   parts.push(`wake lock    ${!Wake.supported ? "<em>unsupported</em>" : Wake.active ? "<b>held</b>" : "idle"}`);
   parts.push(`secure ctx   ${window.isSecureContext ? "<b>yes</b>" : "<em>no — wake lock needs HTTPS</em>"}`);
   parts.push(`standalone   ${(window.navigator.standalone || matchMedia("(display-mode: standalone)").matches) ? "<b>yes</b>" : "no (open from Home Screen)"}`);
@@ -1557,7 +1735,7 @@ function updateStatusChips(){
   const a = $("chip-audio"), w = $("chip-wake");
   if(!Sound.ready){ a.className = "schip"; a.lastElementChild.textContent = "Audio"; }
   else if(Sound.engine === "none"){ a.className = "schip warn"; a.lastElementChild.textContent = "No audio"; }
-  else if(!Sound.hasSessionApi){ a.className = "schip warn"; a.lastElementChild.textContent = "Audio (legacy)"; }
+  else if(Sound.lastError){ a.className = "schip warn"; a.lastElementChild.textContent = "Sound issue"; }
   else { a.className = "schip on"; a.lastElementChild.textContent = S.soundMode === "transient" ? "Duck" : "Mix"; }
 
   if(!Wake.supported){ w.className = "schip warn"; w.lastElementChild.textContent = "No wake lock"; }
@@ -1572,8 +1750,11 @@ function switchView(name){
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   $("view-" + name).classList.add("active");
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
-  window.scrollTo(0, 0);
+  // The header CTA duplicates the on-screen controls mid-workout and is a
+  // mis-tap away from restarting the session.
+  $("btn-quick").hidden = name === "session";
   if(name === "settings"){ renderDiag(); }
+  if(name === "session" && Plan.rows.length) requestAnimationFrame(() => scrollToCurrent());
 }
 
 function openWorkout(id, opts){
@@ -1600,6 +1781,35 @@ $("btn-skip").onclick  = () => Timer.skip();
 
 $("search").addEventListener("input", renderList);
 
+/* Follow mode: the plan tracks the current interval, but a manual scroll hands
+   control back to the user until they ask for it or go idle. */
+$("agenda").addEventListener("scroll", () => {
+  if(Plan.auto){                              // our own smooth-scroll, not the user
+    clearTimeout(Plan.autoT);
+    Plan.autoT = setTimeout(() => { Plan.auto = false; }, 160);
+    return;
+  }
+  Plan.follow = false;
+  if(!Timer.finished && Plan.rows.length) $("btn-jump").hidden = false;
+  clearTimeout(Plan.idleT);
+  Plan.idleT = setTimeout(() => { if(!Plan.follow) scrollToCurrent(); }, 4000);
+}, { passive:true });
+
+$("btn-jump").onclick = () => scrollToCurrent();
+
+document.querySelectorAll("#seg-engine button").forEach(b => {
+  b.onclick = () => {
+    S.engine = b.dataset.v;
+    save(KEY.settings, S);
+    Sound.init();
+    Sound.lastError = null;
+    Sound.engine = (S.engine === "webaudio" && Sound.ctx) ? "webaudio"
+                 : Sound.pool.length ? "element" : Sound.ctx ? "webaudio" : "none";
+    renderSoundSeg(); renderDiag(); updateStatusChips();
+    testSound();
+  };
+});
+
 document.querySelectorAll("#seg-sound button").forEach(b => {
   b.onclick = () => {
     S.soundMode = b.dataset.v;
@@ -1619,15 +1829,19 @@ $("step-vol").querySelectorAll("button").forEach(b => {
   };
 });
 
-$("btn-test").onclick = () => {
+function testSound(){
   Sound.init();
   Sound.applySessionType();
+  Sound.recover();
+  Sound.warned = false;           // let a fresh failure speak up again
   Sound.cue("count", 0);
   Sound.cue("count", 400);
   Sound.cue("go", 800);
   renderDiag(); updateStatusChips();
   toast(Sound.engine === "none" ? "No audio engine available" : "Playing cue…");
-};
+}
+$("btn-test").onclick = testSound;
+$("chip-audio").onclick = testSound;   // one-tap check without leaving the session
 
 $("sw-wake").onclick = () => {
   S.wake = !S.wake;
