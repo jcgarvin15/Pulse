@@ -52,14 +52,27 @@ Two consequences bite a gym timer:
   producing audio, which **interrupts other apps** — Spotify stops.
 
 Pulse sets [`navigator.audioSession.type`](https://developer.mozilla.org/docs/Web/API/AudioSession/type)
-explicitly:
+explicitly.
+
+**The policy is: never dull your music.** Cues layer on top of Spotify at its own
+volume and nothing dips.
 
 | Mode | `audioSession.type` | Behaviour |
 |---|---|---|
-| **Duck** (default) | `transient` | Playback-class session that mixes and ducks. Cues play **over** the silent switch, Spotify dips briefly then recovers. |
-| **Mix** | `ambient` | Cues layer on top at music volume, nothing dips — but iOS mutes them when the silent switch is on. |
+| **Mix** (default) | `ambient` | Cues layer on top at music volume. Spotify is **never** ducked. Requires the ring/silent switch to be **off**, or iOS mutes the cues. |
+| **Duck** | `transient` | Cues play over the silent switch, but Spotify dips for each one. Opt in only if you want to train with the phone silenced. |
 
 Switch between them in **Settings → Sound → Music behaviour**.
+
+The tradeoff is inherent, not an oversight: the Audio Session API exposes no type
+that both refuses to duck *and* ignores the silent switch. `ambient` never ducks
+but obeys the switch; `transient` ignores the switch but ducks; `playback` and
+`transient-solo` interrupt other audio outright. Pulse takes `ambient` and
+surfaces the consequence in the UI rather than hiding it.
+
+Because ducking used to be the default, a one-time migration flips existing
+installs to Mix on first load, leaving every other saved preference untouched. A
+later deliberate choice of Duck is never overridden.
 
 Cues are **scheduled ahead of time against the `AudioContext` clock**, not fired
 from a JS timer, so main-thread jank can't drop or smear a beep. A 100 ms
@@ -127,14 +140,18 @@ Then:
 
 | # | Test | Expected |
 |---|---|---|
-| 1 | Start Spotify, return to Pulse, start a session | Music keeps playing; dips briefly on each cue |
-| 2 | **Flip the physical silent switch on**, tap Test | Cues still audible |
+| 1 | Start Spotify, return to Pulse, start a session | Music keeps playing at full volume, **never dips** |
+| 2 | With the ring/silent switch **off**, tap Test | Cues clearly audible over the music |
 | 3 | Leave a session running ~2 min untouched | Screen never dims; "Screen on" chip stays lit |
 | 4 | Background the app, wait 30 s, return | Timer still correct; wake lock re-acquires |
 | 5 | Enable Airplane Mode, relaunch from Home Screen | App still loads (service worker) |
 
-If test 2 fails, check that **Music behaviour** is set to **Duck** — `ambient`
-mode is silenced by the silent switch by design.
+If the music dips in test 1, check **Settings → Sound → Music behaviour** reads
+**Mix**, and that the Audio check shows `audioSession ambient`.
+
+If cues go silent in test 2, the ring/silent switch is on — that is `ambient`
+behaving as designed. Either flip the switch off, or accept ducking by choosing
+**Duck**.
 
 ## Layout
 
