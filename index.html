@@ -622,7 +622,9 @@ const DEFAULTS = {
   work:45, rest:15,     // inside a superset
   switchSec:30,         // station change — this IS the rest, never stacked with one
   cardioMin:1, cardioMax:5,
-  soundMode:"transient", volume:0.8, wake:true
+  soundMode:"ambient",          // never duck the user's music
+  settingsVersion:2,
+  volume:0.8, wake:true
 };
 
 function load(key, fallback){
@@ -633,6 +635,24 @@ function save(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); }
 
 let S = load(KEY.settings, DEFAULTS);
 let STATS = load(KEY.stats, { sessions:0, seconds:0, lastDay:null, streak:0, todaySeconds:0 });
+
+/* Ducking used to be the default. Saved settings are merged *over* DEFAULTS, so
+   changing the default alone would leave existing installs still ducking. Flip
+   them once, keeping every other saved preference intact. Stamping the version
+   means a later deliberate choice of Duck is never overridden. */
+function migrateSettings(){
+  // Must inspect what is actually ON DISK: S has already been merged over
+  // DEFAULTS, which carries settingsVersion, so the merged copy always looks
+  // migrated even when the stored settings predate this change.
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(KEY.settings) || "null"); } catch(_){}
+  if(stored && (stored.settingsVersion || 0) < 2){
+    S.soundMode = "ambient";
+    S.settingsVersion = 2;
+    save(KEY.settings, S);
+  }
+}
+migrateSettings();
 
 /* ---------------------------------------------------------------- helpers */
 const $ = id => document.getElementById(id);
@@ -665,12 +685,20 @@ function toast(msg){
 /* =========================================================================
    AUDIO
    ------------------------------------------------------------------------
-   iOS specifics this is built around:
-   · Raw Web Audio output is treated as an *ambient* session by default, which
-     means the hardware ring/silent switch mutes it. Setting
-     navigator.audioSession.type = 'transient' promotes it to a playback-class
-     session that mixes-and-ducks: beeps survive the silent switch AND Spotify
-     keeps playing.
+   Policy: never dull the user's music. Cues layer on top of Spotify at its own
+   volume and nothing dips.
+
+   That fixes the type to 'ambient', and the tradeoff is unavoidable rather than
+   an oversight. The Web Audio Session API offers no type that both refuses to
+   duck and ignores the hardware ring/silent switch:
+       ambient   → never ducks, but the silent switch mutes it
+       transient → ignores the silent switch, but ducks other audio
+       playback / transient-solo → interrupt other audio outright
+   We take 'ambient' and surface the consequence in the UI: the ringer switch
+   must be off for cues to be heard. 'transient' stays available in Settings for
+   anyone who would rather train with the phone silenced.
+
+   Other iOS specifics:
    · Where audioSession is unavailable (iOS < 16.4) media *elements* are still
      exempt from the silent switch, so we fall back to a pool of <audio> tags
      fed by a WAV we synthesise at runtime.
@@ -1506,9 +1534,9 @@ function renderTimingNote(){
 function renderSoundSeg(){
   document.querySelectorAll("#seg-sound button").forEach(b =>
     b.classList.toggle("active", b.dataset.v === S.soundMode));
-  $("sound-hint").textContent = S.soundMode === "transient"
-    ? "Music dips briefly for each cue. Cues stay audible even with the silent switch on."
-    : "Cues layer over the music without dipping it — but iOS mutes them when the silent switch is on.";
+  $("sound-hint").textContent = S.soundMode === "ambient"
+    ? "Cues layer over Spotify at full music volume — nothing dips. Keep the ring/silent switch OFF, or iOS mutes the cues."
+    : "Music dips briefly for each cue. Use this only if you want to train with the silent switch on.";
 }
 
 function renderDiag(){
@@ -1516,6 +1544,9 @@ function renderDiag(){
   parts.push(`engine       ${Sound.engine === "none" ? "<em>none</em>" : "<b>" + Sound.engine + "</b>"}`);
   parts.push(`audioSession ${Sound.hasSessionApi ? "<b>" + (navigator.audioSession ? navigator.audioSession.type : "?") + "</b>" : "<em>unsupported (iOS < 16.4)</em>"}`);
   parts.push(`context      ${Sound.ctx ? (Sound.ctx.state === "running" ? "<b>running</b>" : "<em>" + Sound.ctx.state + "</em>") : "<em>none</em>"}`);
+  parts.push(`music        ${S.soundMode === "ambient" ? "<b>never ducked</b>" : "<em>ducks per cue</em>"}`);
+  parts.push(`silent switch ${S.soundMode === "ambient" && Sound.engine === "webaudio"
+    ? "<em>must be OFF or cues are muted</em>" : "<b>cues play regardless</b>"}`);
   parts.push(`wake lock    ${!Wake.supported ? "<em>unsupported</em>" : Wake.active ? "<b>held</b>" : "idle"}`);
   parts.push(`secure ctx   ${window.isSecureContext ? "<b>yes</b>" : "<em>no — wake lock needs HTTPS</em>"}`);
   parts.push(`standalone   ${(window.navigator.standalone || matchMedia("(display-mode: standalone)").matches) ? "<b>yes</b>" : "no (open from Home Screen)"}`);
