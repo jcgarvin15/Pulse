@@ -26,6 +26,8 @@
   --up:#48FD00;
   --down:#FF4A3D;
   --warn:#FFB800;
+  --cardio:#3FD8FF;                 /* cardio reads as effort, distinct from lifting */
+  --cardio-dim:rgba(63,216,255,.14);
   --text:#FFFFFF;
   --muted:#8A9199;
   --muted-2:#5C646D;
@@ -170,21 +172,26 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 }
 .badge.work{background:var(--brand-dim);color:var(--brand)}
 .badge.rest{background:rgba(255,184,0,.14);color:var(--warn)}
-.badge.setup{background:rgba(138,145,153,.14);color:var(--muted)}
+.badge.switch{background:rgba(138,145,153,.14);color:var(--muted)}
+.badge.cardio{background:var(--cardio-dim);color:var(--cardio)}
 .badge.done{background:var(--brand);color:#000}
 .timer{
   font-size:clamp(4.6rem,26vw,6.6rem);font-weight:850;letter-spacing:-.055em;line-height:.94;
   margin-bottom:10px;transition:color .12s;
 }
 .timer.urgent{color:var(--down)}
+.timer.cardio{color:var(--cardio)}
+.timer.long{font-size:clamp(3.4rem,18vw,4.8rem)}   /* m:ss needs more room than "45" */
 /* Reserve two lines so the card doesn't jump as titles change length. */
 .sess-title{font-size:1.18rem;font-weight:800;letter-spacing:-.025em;margin-bottom:5px;
   min-height:2.9em;display:flex;align-items:center;justify-content:center;text-wrap:balance}
-.sess-next{font-size:.87rem;color:var(--muted);margin-bottom:20px;min-height:1.3em}
+.sess-next{font-size:.87rem;color:var(--muted);margin-bottom:20px}
+.sess-next:empty{margin-bottom:6px}
 .bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden;margin-bottom:20px}
 .bar-fill{height:100%;background:var(--brand);border-radius:100px;transform-origin:left;will-change:transform}
 .bar-fill.rest{background:var(--warn)}
-.bar-fill.setup{background:var(--muted)}
+.bar-fill.switch{background:var(--muted)}
+.bar-fill.cardio{background:var(--cardio)}
 .controls{display:grid;grid-template-columns:1fr 1.7fr 1fr;gap:10px}
 .ctrl{
   background:var(--surface-2);border:1px solid var(--border);border-radius:15px;
@@ -193,6 +200,70 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
 .ctrl:active{transform:scale(.96)}
 .ctrl.primary{background:var(--brand);color:#000;border-color:var(--brand);font-size:1rem;letter-spacing:.01em}
 .ctrl.primary.running{background:var(--warn);border-color:var(--warn)}
+
+/* ---------- quarter indicator ---------- */
+.quarters{margin-bottom:16px}
+.qsegs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.qseg{height:4px;border-radius:100px;background:var(--surface-3);overflow:hidden;position:relative}
+.qseg i{position:absolute;inset:0;transform-origin:left;background:var(--brand);
+  transform:scaleX(0);transition:transform .5s var(--ease)}
+.qseg.done i{transform:scaleX(1)}
+.qlabel{font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin-top:9px}
+
+/* ---------- superset pair ---------- */
+.pair{display:flex;flex-direction:column;gap:7px;margin-bottom:20px;text-align:left}
+.pair-row{
+  display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:15px;
+  background:var(--surface-2);border:1px solid transparent;
+  transition:background .3s var(--ease),border-color .3s var(--ease),opacity .3s;
+  opacity:.5;
+}
+.pair-row.on{opacity:1;background:var(--brand-dim);border-color:rgba(72,253,0,.28)}
+.pair-row.rest.on{background:rgba(255,184,0,.12);border-color:rgba(255,184,0,.3)}
+.pair-dot{width:7px;height:7px;border-radius:50%;background:var(--muted-2);flex:0 0 auto;transition:all .3s}
+.pair-row.on .pair-dot{background:var(--brand);box-shadow:0 0 9px var(--brand)}
+.pair-row.rest.on .pair-dot{background:var(--warn);box-shadow:0 0 9px var(--warn)}
+.pair-name{flex:1;min-width:0;font-size:.9rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pair-tag{font-size:.63rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
+.pair-row.on .pair-tag{color:var(--brand)}
+.pair-row.rest.on .pair-tag{color:var(--warn)}
+.pair-solo{padding:13px 15px;border-radius:15px;background:var(--surface-2);text-align:left;
+  font-size:.86rem;color:var(--muted);line-height:1.5}
+.pair-solo b{display:block;color:var(--text);font-size:.95rem;font-weight:700;margin-bottom:2px}
+
+/* ---------- up-next rail ---------- */
+.rail-card{padding:17px 18px 8px}
+.rail-head{font-size:.8rem;font-weight:750;color:var(--muted);margin-bottom:14px;letter-spacing:.01em}
+.rail{list-style:none;position:relative;padding-left:26px}
+/* the connecting thread */
+.rail::before{content:"";position:absolute;left:7px;top:9px;bottom:22px;width:2px;
+  background:linear-gradient(var(--surface-3),transparent);border-radius:2px}
+.rail li{position:relative;padding:0 0 17px;display:flex;align-items:flex-start;gap:11px;
+  animation:railIn .45s var(--ease) both}
+.rail li::before{content:"";position:absolute;left:-23px;top:5px;width:9px;height:9px;border-radius:50%;
+  background:var(--surface-3);border:2px solid var(--bg);box-sizing:content-box}
+.rail li.now::before{background:var(--brand);box-shadow:0 0 10px var(--brand)}
+.rail li.cardio::before{background:var(--cardio)}
+.rail li.rest::before{background:var(--warn)}
+.rail-txt{flex:1;min-width:0}
+.rail-txt b{display:block;font-size:.9rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-txt small{display:block;font-size:.75rem;color:var(--muted);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail li.now .rail-txt b{color:var(--brand)}
+.rail-dur{font-size:.78rem;font-weight:700;color:var(--muted);flex:0 0 auto;padding-top:1px}
+.rail li:nth-child(2){opacity:.86}
+.rail li:nth-child(3){opacity:.68}
+.rail li:nth-child(4){opacity:.5}
+.rail li:nth-child(5){opacity:.34}
+.rail li:nth-child(6){opacity:.2}
+.rail li:nth-child(2){animation-delay:.04s}
+.rail li:nth-child(3){animation-delay:.08s}
+.rail li:nth-child(4){animation-delay:.12s}
+.rail li:nth-child(5){animation-delay:.16s}
+.rail li:nth-child(6){animation-delay:.2s}
+@keyframes railIn{from{opacity:0;transform:translateY(7px)}}
+.rail-done{color:var(--muted);font-size:.85rem;padding-bottom:16px}
 
 .chart-card{padding:16px 16px 12px}
 .chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -311,16 +382,26 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
         </div>
 
         <div class="card timer-card">
+          <div class="quarters">
+            <div class="qsegs" id="s-qsegs"></div>
+            <div class="qlabel" id="s-qlabel">Quarter 1 of 4</div>
+          </div>
           <div class="badge work" id="s-badge">Work</div>
           <div class="timer tnum" id="s-timer">45</div>
           <div class="sess-title" id="s-title">—</div>
           <div class="sess-next" id="s-next">—</div>
           <div class="bar"><div class="bar-fill" id="s-bar"></div></div>
+          <div class="pair" id="s-pair"></div>
           <div class="controls">
             <button class="ctrl" id="btn-reset">Reset</button>
             <button class="ctrl primary" id="btn-play">Start</button>
             <button class="ctrl" id="btn-skip">Skip</button>
           </div>
+        </div>
+
+        <div class="card rail-card">
+          <div class="rail-head">Coming up</div>
+          <ol class="rail" id="s-rail"></ol>
         </div>
 
         <div class="card chart-card">
@@ -331,8 +412,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tou
           <div class="chart-wrap"><svg class="chart" id="chart" preserveAspectRatio="none"></svg></div>
           <div class="chart-legend">
             <div><i style="background:var(--brand)"></i>Work</div>
+            <div><i style="background:var(--cardio)"></i>Cardio</div>
             <div><i style="background:var(--warn)"></i>Rest</div>
-            <div><i style="background:var(--muted-2)"></i>Station change</div>
+            <div><i style="background:var(--muted-2)"></i>Change</div>
           </div>
         </div>
 
@@ -520,9 +602,28 @@ const WORKOUTS = Array.from({length:100}, (_,i) => {
   return { id:i, symbol:`${t.sym}${i+1}`, name:t.name, category:t.category, pool:t.pool };
 });
 
+/* Cardio drawn between quarters. Machines first, bodyweight as fallbacks for
+   gyms where the ergs are busy. */
+const CARDIO_POOL = [
+  { name:"Concept2 Rower",   cue:"steady pace, drive with the legs" },
+  { name:"Assault AirBike",  cue:"hard but sustainable" },
+  { name:"SkiErg",           cue:"full lat pull, hinge at the hips" },
+  { name:"Jump Rope",        cue:"light on the feet" },
+  { name:"Treadmill Run",    cue:"find a rhythm and hold it" },
+  { name:"Battle Ropes",     cue:"alternating waves" },
+  { name:"Shuttle Runs",     cue:"touch the line, stay low on the turn" },
+  { name:"Row / Ski Mix",    cue:"swap machine at the halfway point" }
+];
+
 /* ---------------------------------------------------------------- storage */
-const KEY = { settings:"pulse.v2.settings", stats:"pulse.v2.stats", resume:"pulse.v2.resume" };
-const DEFAULTS = { work:45, rest:15, setup:60, supersets:9, sets:2, soundMode:"transient", volume:0.8, wake:true };
+const KEY = { settings:"pulse.v3.settings", stats:"pulse.v2.stats", resume:"pulse.v3.resume" };
+const DEFAULTS = {
+  sessionMin:45,        // whole session, cardio included
+  work:45, rest:15,     // inside a superset
+  switchSec:30,         // station change — this IS the rest, never stacked with one
+  cardioMin:1, cardioMax:5,
+  soundMode:"transient", volume:0.8, wake:true
+};
 
 function load(key, fallback){
   try { const raw = localStorage.getItem(key); return raw ? Object.assign({}, fallback, JSON.parse(raw)) : Object.assign({}, fallback); }
@@ -546,6 +647,11 @@ function humanDur(sec){
   return h ? `${h}h ${m}m` : `${m}m`;
 }
 function todayKey(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+const ESC = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ESC[c]);
+/* Cardio blocks run minutes, so a bare second count ("255") is unreadable.
+   Anything a minute or over switches to m:ss. */
+const timerText = secs => secs >= 60 ? mmss(secs) : String(Math.max(0, secs));
 
 let toastTimer = null;
 function toast(msg){
@@ -752,29 +858,132 @@ document.addEventListener("visibilitychange", () => {
 /* =========================================================================
    QUEUE
    ========================================================================= */
+const QUARTERS = 4;          // the session is played in quarters
+const SS_PER_QUARTER = 2;    // two supersets (two stations) per quarter
+const REST_LIKE = new Set(["REST", "SWITCH"]);   // CARDIO is effort, not rest
+
+const randInt = n => Math.floor(Math.random() * n);
+
+/**
+ * Decide cardio lengths and how many rounds each superset gets, such that the
+ * whole session lands on exactly S.sessionMin minutes.
+ *
+ * Work and rest are fixed, so the only integer lever is round count — and a
+ * round is (2*work + 2*rest) seconds, far too coarse to hit an exact total on
+ * its own. The leftover is therefore absorbed back into the three cardio
+ * blocks, which are randomised anyway. Cardio is rolled with 15s of headroom
+ * inside its own min/max so that adjustment never needs clamping.
+ */
+function planSession(){
+  const target  = S.sessionMin * 60;
+  const gaps    = QUARTERS - 1;                 // cardio blocks, between quarters
+  const nSS     = QUARTERS * SS_PER_QUARTER;
+  const roundSec = 2 * S.work + 2 * S.rest;
+
+  const floor_ = Math.max(30, S.cardioMin * 60);
+  const ceil_  = Math.max(floor_, S.cardioMax * 60);
+  const lo = Math.min(floor_ + 15, ceil_), hi = Math.max(ceil_ - 15, lo);
+  const steps = Math.floor((hi - lo) / 15) + 1;
+
+  const cardio = Array.from({length:gaps}, () => lo + 15 * randInt(steps));
+
+  // switches: one after each cardio, plus one between the supersets in a quarter
+  const switches = gaps + QUARTERS * (SS_PER_QUARTER - 1);
+  const fixed = switches * S.switchSec;
+
+  const budget = target - cardio.reduce((a,b) => a+b, 0) - fixed;
+  // superset of R rounds costs R*roundSec - rest (the trailing rest is dropped)
+  let T = Math.round((budget + nSS * S.rest) / roundSec);
+  T = Math.max(nSS, T);                         // at least one round each
+
+  const base = Math.floor(T / nSS), extra = T % nSS;
+  const rounds = Array.from({length:nSS}, (_,i) => base + (i < extra ? 1 : 0));
+
+  // absorb whatever is left over into the cardio blocks
+  let residual = target - (cardio.reduce((a,b)=>a+b,0) + fixed + roundSec * T - nSS * S.rest);
+  for(let i=0; i<cardio.length && residual !== 0; i++){
+    const delta = residual > 0 ? Math.min(residual, ceil_ - cardio[i])
+                               : Math.max(residual, floor_ - cardio[i]);
+    cardio[i] += delta;
+    residual  -= delta;
+  }
+
+  const picks = [];
+  for(let i=0; i<gaps; i++){
+    let c;                                       // avoid repeating back to back
+    do { c = CARDIO_POOL[randInt(CARDIO_POOL.length)]; } while(picks.length && c === picks[picks.length-1]);
+    picks.push(c);
+  }
+  return { cardio, rounds, picks };
+}
+
+/**
+ * Build the interval queue.
+ *
+ * Structural invariant: no two rest-like intervals are ever adjacent. A
+ * superset's trailing rest is simply not emitted — whatever follows (a station
+ * switch, or the cardio block between quarters) serves as that rest. So every
+ * quarter ends on WORK and cardio always follows effort.
+ */
 function buildQueue(w){
+  const { cardio, rounds, picks } = planSession();
   const q = [];
-  for(let s=0; s<S.supersets; s++){
-    const pair = w.pool[s % w.pool.length];
-    const next = w.pool[(s+1) % w.pool.length];
-    for(let set=1; set<=S.sets; set++){
-      const lastSet = set === S.sets, lastSuper = s === S.supersets - 1;
-      q.push({ type:"WORK", duration:S.work, title:`${pair.a} (Set ${set})`,
-               next:`Rest ${S.rest}s → ${pair.b}`, superset:s+1 });
-      q.push({ type:"REST", duration:S.rest, title:"Rest / Switch",
-               next:`Next: ${pair.b} (Set ${set})`, superset:s+1 });
-      q.push({ type:"WORK", duration:S.work, title:`${pair.b} (Set ${set})`,
-               next: !lastSet ? `Rest ${S.rest}s → ${pair.a}`
-                    : lastSuper ? "Final rest — nearly there" : "Station change next",
-               superset:s+1 });
-      q.push({ type:"REST", duration:S.rest, title:"Rest / Switch",
-               next: !lastSet ? `Next: ${pair.a} (Set ${set+1})`
-                    : lastSuper ? "Session complete" : "Station change next",
-               superset:s+1 });
+  const pairAt = i => w.pool[i % w.pool.length];
+  let ss = 0;
+
+  for(let quarter=1; quarter<=QUARTERS; quarter++){
+    for(let inQ=0; inQ<SS_PER_QUARTER; inQ++, ss++){
+      const pair = pairAt(ss), R = rounds[ss];
+      const nextPair = pairAt(ss + 1);
+      const lastSSofQuarter = inQ === SS_PER_QUARTER - 1;
+      const lastQuarter = quarter === QUARTERS;
+
+      for(let r=1; r<=R; r++){
+        const lastRound = r === R;
+        const common = { quarter, round:r, rounds:R, pairA:pair.a, pairB:pair.b };
+
+        q.push(Object.assign({ type:"WORK", duration:S.work, active:"a",
+          title:pair.a, detail:`Round ${r} of ${R}`,
+          next:`${S.rest}s breather, then ${pair.b}` }, common));
+
+        q.push(Object.assign({ type:"REST", duration:S.rest, active:"b",
+          title:"Catch your breath", detail:"Short rest",
+          next:`Up next: ${pair.b}` }, common));
+
+        q.push(Object.assign({ type:"WORK", duration:S.work, active:"b",
+          title:pair.b, detail:`Round ${r} of ${R}`,
+          next: !lastRound ? `${S.rest}s breather, then back to ${pair.a}`
+              : !lastSSofQuarter ? `Station change — ${nextPair.a} next`
+              : !lastQuarter ? `Cardio break next`
+              : "Last one — finish strong" }, common));
+
+        // Trailing rest is deliberately omitted on the final round: the SWITCH
+        // or CARDIO that follows is the rest. This is the no-double-rest rule.
+        if(!lastRound){
+          q.push(Object.assign({ type:"REST", duration:S.rest, active:"a",
+            title:"Catch your breath", detail:"Short rest",
+            next:`Up next: ${pair.a}` }, common));
+        }
+      }
+
+      if(!lastSSofQuarter){
+        q.push({ type:"SWITCH", duration:S.switchSec, quarter,
+                 title:`Move to ${nextPair.a}`, detail:"Station change & rest",
+                 next:`Then: ${nextPair.a} & ${nextPair.b}`,
+                 pairA:nextPair.a, pairB:nextPair.b, active:"a" });
+      }
     }
-    if(s < S.supersets - 1){
-      q.push({ type:"SETUP", duration:S.setup, title:"Station change",
-               next:`Next up: ${next.a} & ${next.b}`, superset:s+1 });
+
+    if(quarter < QUARTERS){
+      const c = picks[quarter-1], secs = cardio[quarter-1];
+      const after = pairAt(ss);
+      q.push({ type:"CARDIO", duration:secs, quarter,
+               title:c.name, detail:`${mmss(secs)} · ${c.cue}`,
+               next:`Then quarter ${quarter+1}`, cardio:true });
+      q.push({ type:"SWITCH", duration:S.switchSec, quarter:quarter+1,
+               title:`Move to ${after.a}`, detail:"Station change & rest",
+               next:`Quarter ${quarter+1}: ${after.a} & ${after.b}`,
+               pairA:after.a, pairB:after.b, active:"a" });
     }
   }
   return q;
@@ -1035,7 +1244,12 @@ function renderList(){
 /* =========================================================================
    RENDER — session
    ========================================================================= */
-const BADGE = { WORK:["work","Work"], REST:["rest","Rest"], SETUP:["setup","Station change"] };
+const BADGE = {
+  WORK:  ["work",   "Work"],
+  REST:  ["rest",   "Breather"],
+  SWITCH:["switch", "Station change"],
+  CARDIO:["cardio", "Cardio break"]
+};
 
 function renderStatic(){
   const t = Timer, item = t.current;
@@ -1043,10 +1257,61 @@ function renderStatic(){
   const [cls, label] = BADGE[item.type];
   const badge = $("s-badge");
   badge.className = "badge " + cls;
-  badge.textContent = item.type === "SETUP" ? label : `Superset ${item.superset} · ${label}`;
+  badge.textContent = item.type === "WORK" ? item.detail : label;
   $("s-title").textContent = item.title;
-  $("s-next").textContent = item.next;
-  $("s-bar").className = "bar-fill" + (item.type === "REST" ? " rest" : item.type === "SETUP" ? " setup" : "");
+  // The rail below already says what's next, so this line is reserved for
+  // things it can't carry: a cardio coaching cue, or the closing summary.
+  $("s-next").textContent = item.type === "CARDIO" ? item.detail : "";
+  $("s-bar").className = "bar-fill" + (cls === "work" ? "" : " " + cls);
+  $("s-timer").classList.toggle("cardio", item.type === "CARDIO");
+  renderQuarters();
+  renderPair();
+  renderRail();
+}
+
+/** Four segments, one per quarter, filling as you go. */
+function renderQuarters(){
+  const t = Timer, item = t.current;
+  const q = item ? item.quarter : QUARTERS;
+  const segs = $("s-qsegs");
+  if(segs.children.length !== QUARTERS){
+    segs.innerHTML = Array.from({length:QUARTERS}, () => "<div class='qseg'><i></i></div>").join("");
+  }
+  [...segs.children].forEach((el, i) => el.classList.toggle("done", i < (t.finished ? QUARTERS : q)));
+  $("s-qlabel").textContent = t.finished ? "All four quarters done" : `Quarter ${q} of ${QUARTERS}`;
+}
+
+/** Both halves of the superset, with the live one lit. */
+function renderPair(){
+  const item = Timer.current, box = $("s-pair");
+  if(!item) return;
+  // Cardio has no superset pair; its cue is already on the line under the timer.
+  if(!item.pairA || !item.pairB){ box.innerHTML = ""; return; }
+  const resting = item.type !== "WORK";
+  const rows = [["a", item.pairA], ["b", item.pairB]].map(([side, name]) => {
+    const on = item.active === side;
+    const tag = !on ? "Then" : resting ? "Up next" : "Now";
+    return `<div class="pair-row${on ? " on" : ""}${resting ? " rest" : ""}">
+              <span class="pair-dot"></span>
+              <span class="pair-name">${esc(name)}</span>
+              <span class="pair-tag">${tag}</span>
+            </div>`;
+  });
+  box.innerHTML = rows.join("");
+}
+
+/** The upcoming-intervals rail: current item plus the next five. */
+function renderRail(){
+  const t = Timer, rail = $("s-rail");
+  if(t.finished){ rail.innerHTML = `<div class="rail-done">Nothing left — you're done.</div>`; return; }
+  const slice = t.queue.slice(t.idx, t.idx + 6);
+  rail.innerHTML = slice.map((it, i) => {
+    const cls = i === 0 ? "now" : it.type === "CARDIO" ? "cardio" : REST_LIKE.has(it.type) ? "rest" : "";
+    return `<li class="${cls}">
+              <div class="rail-txt"><b>${esc(it.title)}</b><small>${esc(it.detail || "")}</small></div>
+              <span class="rail-dur tnum">${mmss(it.duration)}</span>
+            </li>`;
+  }).join("");
 }
 
 function renderTick(){
@@ -1056,9 +1321,10 @@ function renderTick(){
   const leftMs = t.msLeft;
   const secs = Math.ceil(leftMs / 1000);          // ceil: "45" shows for a full second
   const el = $("s-timer");
-  const txt = String(Math.max(0, secs));
+  const txt = timerText(secs);
   if(el.textContent !== txt) el.textContent = txt;
   el.classList.toggle("urgent", secs <= 3 && secs > 0);
+  el.classList.toggle("long", secs >= 60);
 
   const frac = clamp(leftMs / (item.duration * 1000), 0, 1);
   $("s-bar").style.transform = `scaleX(${frac})`;
@@ -1090,15 +1356,20 @@ function renderSession(full){
     const badge = $("s-badge");
     badge.className = "badge done"; badge.textContent = "Complete";
     $("s-timer").textContent = "0";
-    $("s-timer").classList.remove("urgent");
+    $("s-timer").classList.remove("urgent", "cardio");
     $("s-title").textContent = "Session complete";
     $("s-next").textContent = `${humanDur(queueSeconds(t.queue))} of work in the books.`;
     $("s-bar").style.transform = "scaleX(0)";
+    $("s-pair").innerHTML = "";
+    renderQuarters();
+    renderRail();
     $("chart-time").textContent = `${mmss(queueSeconds(t.queue))} / ${mmss(queueSeconds(t.queue))}`;
     updatePlayhead(1);
   } else {
     renderStatic();
-    $("s-timer").textContent = String(Math.ceil(t.msLeft/1000));
+    const secs = Math.ceil(t.msLeft/1000);
+    $("s-timer").textContent = timerText(secs);
+    $("s-timer").classList.toggle("long", secs >= 60);
     $("s-bar").style.transform = `scaleX(${clamp(t.msLeft/(t.current.duration*1000),0,1)})`;
     renderTickStaticTime();
   }
@@ -1116,29 +1387,35 @@ function renderTickStaticTime(){
 }
 
 function renderBlueprint(){
-  const t = Timer, total = queueSeconds(t.queue);
+  const t = Timer, q = t.queue;
+  const cardio = q.filter(i => i.type === "CARDIO");
+  const rounds = [...new Set(q.filter(i => i.type === "WORK").map(i => i.rounds))].sort();
   const rows = [
-    ["Structure", `${S.supersets} supersets · ${S.sets} sets per pair`],
+    ["Format", `${QUARTERS} quarters · ${SS_PER_QUARTER} stations each`],
+    ["Rounds per station", rounds.join(" – ")],
     ["Intervals", `${S.work}s work / ${S.rest}s rest`],
-    ["Station change", `${S.setup}s between supersets`],
-    ["Total duration", humanDur(total)],
+    ["Cardio breaks", cardio.map(c => mmss(c.duration)).join(" · ")],
+    ["Total", mmss(queueSeconds(q))],
     ["Category", t.workout.category]
   ];
-  $("blueprint").innerHTML = rows.map(r => `<div class="bp-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join("");
+  $("blueprint").innerHTML = rows.map(r => `<div class="bp-row"><span>${esc(r[0])}</span><span>${esc(r[1])}</span></div>`).join("");
 }
 
 /* ---- the session chart: a literal pulse waveform of the whole workout ---- */
 const CH = { w:600, h:88 };
 function drawChart(){
   const t = Timer, q = t.queue, total = queueSeconds(q);
-  const LEVEL = { WORK:1, REST:0.42, SETUP:0.14 };
+  // Cardio sits high because it is effort, not recovery.
+  const LEVEL = { WORK:1, CARDIO:0.72, REST:0.4, SWITCH:0.14 };
   const top = 8, bottom = CH.h - 6, span = bottom - top;
   let x = 0;
-  const pts = [];
+  const pts = [], bands = [];
   for(const it of q){
     const y = bottom - span * LEVEL[it.type];
     pts.push([x, y]);
-    x += it.duration / total * CH.w;
+    const w = it.duration / total * CH.w;
+    if(it.type === "CARDIO") bands.push(`<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${CH.h}" fill="var(--cardio)" opacity=".13" rx="2"/>`);
+    x += w;
     pts.push([x, y]);
   }
   const line = pts.map((p,i) => `${i?"L":"M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("");
@@ -1153,6 +1430,7 @@ function drawChart(){
       </linearGradient>
       <clipPath id="clip-done"><rect id="clip-rect" x="0" y="0" width="0" height="${CH.h}"/></clipPath>
     </defs>
+    ${bands.join("")}
     <path d="${area}" fill="url(#g-fill)" opacity=".5"/>
     <path d="${line}" fill="none" stroke="var(--muted-2)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
     <g clip-path="url(#clip-done)">
@@ -1183,11 +1461,12 @@ function updatePlayhead(frac){
    RENDER — settings
    ========================================================================= */
 const TIMING = [
-  { key:"work",      label:"Work",           min:5,  max:300, step:5, unit:"s" },
-  { key:"rest",      label:"Rest",           min:5,  max:300, step:5, unit:"s" },
-  { key:"setup",     label:"Station change", min:0,  max:300, step:15, unit:"s" },
-  { key:"supersets", label:"Supersets",      min:1,  max:20,  step:1, unit:"" },
-  { key:"sets",      label:"Sets per pair",  min:1,  max:10,  step:1, unit:"" }
+  { key:"sessionMin", label:"Session length",  min:15, max:90,  step:5,  unit:" min" },
+  { key:"work",       label:"Work",            min:15, max:120, step:5,  unit:"s" },
+  { key:"rest",       label:"Rest",            min:5,  max:60,  step:5,  unit:"s" },
+  { key:"switchSec",  label:"Station change",  min:15, max:120, step:15, unit:"s" },
+  { key:"cardioMin",  label:"Cardio min",      min:1,  max:5,   step:1,  unit:" min" },
+  { key:"cardioMax",  label:"Cardio max",      min:1,  max:10,  step:1,  unit:" min" }
 ];
 
 function renderTiming(){
@@ -1205,6 +1484,9 @@ function renderTiming(){
     row.querySelectorAll("button").forEach(b => {
       b.onclick = () => {
         S[t.key] = clamp(S[t.key] + Number(b.dataset.d) * t.step, t.min, t.max);
+        // keep the cardio window coherent whichever end was nudged
+        if(t.key === "cardioMin") S.cardioMax = Math.max(S.cardioMax, S.cardioMin);
+        if(t.key === "cardioMax") S.cardioMin = Math.min(S.cardioMin, S.cardioMax);
         save(KEY.settings, S);
         renderTiming(); renderTimingNote(); renderStats();
         if(Timer.workout && !Timer.running){ Timer.loadWorkout(Timer.workout); }
@@ -1215,8 +1497,10 @@ function renderTiming(){
 }
 function renderTimingNote(){
   const q = buildQueue(WORKOUTS[0]);
+  const rounds = [...new Set(q.filter(i => i.type === "WORK").map(i => i.rounds))].sort();
   $("timing-note").textContent =
-    `One session runs ${mmss(queueSeconds(q))} across ${q.length} intervals. Changing these rebuilds every workout.`;
+    `${QUARTERS} quarters, ${SS_PER_QUARTER} stations each, with a randomised cardio break between them. ` +
+    `Rounds per station flex (${rounds.join("–")}) so every session lands on ${mmss(queueSeconds(q))}.`;
 }
 
 function renderSoundSeg(){
@@ -1365,7 +1649,8 @@ if("serviceWorker" in navigator){
 }
 
 // exposed for the test harness
-window.__pulse = { Timer, Sound, Wake, buildQueue, queueSeconds, WORKOUTS, get S(){ return S; } };
+window.__pulse = { Timer, Sound, Wake, buildQueue, queueSeconds, WORKOUTS,
+                   QUARTERS, SS_PER_QUARTER, REST_LIKE, CARDIO_POOL, get S(){ return S; } };
 </script>
 </body>
 </html>
