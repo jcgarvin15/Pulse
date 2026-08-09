@@ -29,9 +29,19 @@ Quarter 2 … Quarter 3 … Quarter 4                      ends on work
   the time left after cardio, and the residual is absorbed back into the cardio
   blocks so the total lands on 45:00 exactly — verified over 50,000 random rolls.
 
-An **up-next rail** under the timer shows the next six intervals, and the session
-chart draws the whole workout as a pulse waveform with the cardio blocks
-highlighted.
+### Session screen
+
+The timer is **pinned** — it never scrolls away. The complete plan scrolls
+underneath it: every interval, grouped under sticky quarter headers, completed
+rows struck through, the current one lit.
+
+It follows along on its own, centring each interval as it starts. Scroll manually
+and following pauses, with a **Jump to now** pill to get back; it also resumes by
+itself after a few seconds idle. Scrolling is contained to the plan, so the page
+behind it never rubber-bands.
+
+The session chart draws the whole workout as a pulse waveform with the cardio
+blocks highlighted.
 
 ## The three gym requirements
 
@@ -74,10 +84,30 @@ Because ducking used to be the default, a one-time migration flips existing
 installs to Mix on first load, leaving every other saved preference untouched. A
 later deliberate choice of Duck is never overridden.
 
-Cues are **scheduled ahead of time against the `AudioContext` clock**, not fired
-from a JS timer, so main-thread jank can't drop or smear a beep. A 100 ms
-scheduler looks 1.5 s into the future and books each cue at an exact audio-clock
-time.
+### Sound engine
+
+Cues play through a pool of HTML `<audio>` elements by default, not raw Web
+Audio. Two reasons, both learned the hard way on a real phone:
+
+- iOS exempts media elements from the ring/silent switch.
+- An `AudioContext` can be **suspended by iOS at any time** (an interruption,
+  another app taking the session). The `resume()` that would revive it runs from
+  the cue scheduler — a timer, not a user gesture — which iOS refuses. The
+  result was a context stuck suspended and *every remaining cue silent, with no
+  error*. That failure mode is why elements are now the default.
+
+Elements must still be unlocked by a user gesture, so the pool is primed (played
+and immediately paused) inside the first tap. Without that the element path is
+silent too.
+
+**Precise** mode in Settings switches back to Web Audio, which schedules cues
+ahead against the `AudioContext` clock — a 100 ms scheduler looking 1.5 s into
+the future — so main-thread jank can't smear a beep. Tighter timing, but exposed
+to the suspension problem above.
+
+Whichever engine is live, a failed cue now **says so**: the Audio chip turns to a
+warning, a toast fires once, and the Audio check names the error. Tap the **Audio
+chip in the session header** to fire a real cue without leaving the workout.
 
 `navigator.audioSession` requires **iOS 16.4+**. On older versions Pulse falls
 back to a pool of `<audio>` elements fed by a WAV it synthesises at runtime —
