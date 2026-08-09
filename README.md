@@ -2,7 +2,38 @@
 
 Interval training timer built as an installable iOS web app. Robinhood-style dark
 UI, a portfolio of 100 equipment-paired workouts, and a session view built around
-three things that have to work in a gym:
+three things that have to work in a gym.
+
+## Session structure
+
+Every session is **exactly 45 minutes**, played in **four quarters**:
+
+```
+Quarter 1   station A (superset pair)  ─ work · rest · work · rest ─ × rounds
+            station change 30s          ← this IS the rest, never stacked with one
+            station B                  ─ … ─                        ends on work
+CARDIO      randomized 1–5 min
+            station change 30s
+Quarter 2 … Quarter 3 … Quarter 4                      ends on work
+```
+
+- Two stations (superset pairs) per quarter, both exercises shown on screen with
+  the live one lit.
+- A randomized cardio block between quarters — different machine and length each
+  session — followed by one 30s station change.
+- **No two rest periods ever run back to back.** A superset's trailing rest is
+  simply not emitted; whatever follows it (station change, or the cardio block)
+  *is* that rest. Enforced structurally, and asserted by the test suite across
+  300 generated sessions.
+- Work stays 45s and rest 15s. Rounds per station flex (typically 2–3) to fill
+  the time left after cardio, and the residual is absorbed back into the cardio
+  blocks so the total lands on 45:00 exactly — verified over 50,000 random rolls.
+
+An **up-next rail** under the timer shows the next six intervals, and the session
+chart draws the whole workout as a pulse waveform with the cardio blocks
+highlighted.
+
+## The three gym requirements
 
 1. **Cues are audible** — even with the iPhone's physical silent switch on.
 2. **Spotify keeps playing** — the music ducks for each cue, then comes back.
